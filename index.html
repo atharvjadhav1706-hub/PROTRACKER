@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Pro Fitness</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        /* =========================================
+           1. DESIGN SYSTEM
+           ========================================= */
+        :root {
+            --font-stack: 'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --app-max-width: 450px;
+            
+            /* GLOBAL COLORS */
+            --bg-grad: linear-gradient(-45deg, #e0c3fc, #8ec5fc, #e0c3fc, #cfd9df);
+            --glass-bg: rgba(255, 255, 255, 0.9);
+            --glass-border: rgba(255, 255, 255, 1);
+            --glass-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            
+            --text-primary: #1C1C1E;
+            --text-secondary: #8E8E93;
+            
+            /* BRAND COLORS */
+            --col-cal: #FF9500;
+            --col-meal: #34C759;
+            --col-gym: #007AFF;
+            --col-cardio: #FF2D55;
+            --col-steps: #00C7BE;
+            --col-core: #FF3B30;
+            --col-egg: #FFCC00;
+            --col-mantra: #AF52DE;
+            --col-study: #5856D6;
+            
+            --radius-card: 20px;
+            --ease-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; outline: none; }
+        
+        /* NO REFRESH LOGIC */
+        html { 
+            overscroll-behavior: none; /* Prevents pull-to-refresh on Chrome/Android */
+        }
+
+        body {
+            font-family: var(--font-stack);
+            background: var(--bg-grad);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: var(--text-primary);
+            overflow: hidden; /* Prevents body scroll */
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            overscroll-behavior-y: none; /* Prevents pull-to-refresh */
+        }
+
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+        #app-root {
+            width: 100%; max-width: var(--app-max-width); height: 100%;
+            position: relative;
+            background: #F2F2F7;
+        }
+
+        svg { display: block; }
+
+        /* =========================================
+           2. SHARED COMPONENTS
+           ========================================= */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            border-radius: var(--radius-card);
+            display: flex; align-items: stretch; padding: 0; 
+            position: relative; overflow: hidden;
+            transition: transform 0.15s ease;
+            min-height: 85px;
+            --theme-color: #8E8E93; 
+        }
+        .glass-card:active { transform: scale(0.98); }
+
+        .card-strip { width: 6px; background: var(--theme-color); flex-shrink: 0; }
+
+        .card-content {
+            flex: 1; padding: 16px 12px 16px 16px;
+            display: flex; flex-direction: column; justify-content: center;
+            min-width: 0; 
+        }
+
+        .meta-tag {
+            display: inline-block; width: fit-content;
+            font-size: 11px; font-weight: 700; color: var(--text-secondary);
+            background: #F2F2F7; padding: 4px 8px; border-radius: 6px; 
+            margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .item-title { font-size: 18px; font-weight: 800; color: var(--text-primary); line-height: 1.2; margin-bottom: 3px; }
+        .item-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.3; }
+        .item-cal { font-size: 13px; font-weight: 700; color: var(--theme-color); margin-top: 3px; }
+
+        .checkbox-wrapper { padding-right: 20px; display: flex; align-items: center; justify-content: center; }
+        .custom-checkbox {
+            appearance: none; width: 28px; height: 28px;
+            border: 2px solid #D1D1D6; border-radius: 50%;
+            background: transparent; cursor: pointer;
+            transition: 0.3s; position: relative;
+        }
+        .glass-card .custom-checkbox:checked {
+            background: var(--theme-color); border-color: var(--theme-color);
+            transform: scale(1.1); box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .custom-checkbox:checked::after {
+            content: ''; position: absolute; left: 9px; top: 5px; 
+            width: 6px; height: 12px; border: solid white; 
+            border-width: 0 2.5px 2.5px 0; transform: rotate(45deg);
+        }
+
+        .item-completed { opacity: 0.5; filter: grayscale(0.8); }
+        .item-completed .item-title { text-decoration: line-through; }
+
+        /* Theme Classes */
+        .t-cal  { --theme-color: var(--col-cal); }
+        .t-meal { --theme-color: var(--col-meal); }
+        .t-gym  { --theme-color: var(--col-gym); }
+        .t-core { --theme-color: var(--col-core); }
+        .t-cardio { --theme-color: var(--col-cardio); }
+        .t-steps { --theme-color: var(--col-steps); }
+        .t-egg { --theme-color: var(--col-egg); }
+        .t-mantra { --theme-color: var(--col-mantra); }
+        .t-study { --theme-color: var(--col-study); }
+
+        /* =========================================
+           3. VIEW LAYOUTS
+           ========================================= */
+        .view-layer {
+            width: 100%; height: 100%;
+            position: absolute; top: 0; left: 0;
+            display: flex; flex-direction: column;
+            transition: transform 0.4s var(--ease-smooth), opacity 0.3s ease;
+            background: transparent;
+        }
+        
+        .view-content {
+            flex: 1; overflow-y: auto; 
+            padding: 0 20px;
+            padding-bottom: 150px;
+            scrollbar-width: none;
+            overscroll-behavior-y: contain; /* Local scroll only */
+        }
+        .view-content::-webkit-scrollbar { display: none; }
+
+        .view-layer.hidden { transform: scale(0.95); opacity: 0; pointer-events: none; }
+        .view-layer.active-overlay { transform: translateY(0); opacity: 1; z-index: 20; }
+        .view-layer.inactive-overlay { transform: translateY(100%); opacity: 0; z-index: 20; }
+
+        .sticky-header {
+            position: sticky; top: 0; z-index: 50;
+            padding: 50px 20px 15px 20px;
+            background: rgba(242, 242, 247, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        
+        .nav-row { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+        .btn-back {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: rgba(255,255,255,0.6); backdrop-filter: blur(10px);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.8);
+        }
+        .date-pill {
+            background: rgba(255,255,255,0.6); padding: 8px 16px; border-radius: 20px;
+            font-size: 13px; font-weight: 700; color: var(--text-primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.8);
+        }
+
+        .user-block h1 { font-size: 14px; font-weight: 700; color: var(--text-secondary); margin: 0; text-transform: uppercase; letter-spacing: 1px;}
+        #userName { font-size: 32px; font-weight: 800; color: var(--text-primary); margin-top: 2px; line-height: 1; }
+
+        .card-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; letter-spacing: 0.5px; }
+        .progress-track { background: #E5E5EA; height: 10px; border-radius: 10px; overflow: hidden; margin-top: 10px; width: 100%; }
+        .progress-fill { height: 100%; width: 0%; border-radius: 10px; transition: width 0.5s ease-out; }
+        .grid { display: flex; gap: 15px; margin-top: 20px; margin-bottom: 20px; }
+        .grid-item { flex: 1; min-height: 160px; cursor: pointer; }
+
+        .activity-widget { margin-top: 20px; display: flex; flex-direction: column; }
+        .act-toggle-container { background: #F2F2F7; border-radius: 12px; padding: 4px; display: flex; position: relative; margin-bottom: 10px; }
+        .toggle-slider { position: absolute; top: 4px; left: 4px; bottom: 4px; width: calc(50% - 4px); background: #FFF; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.3s ease; }
+        .toggle-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 13px; font-weight: 700; z-index: 2; position: relative; color: var(--text-secondary); transition: 0.3s; }
+        .toggle-btn.active { color: #000; }
+        .act-controls { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+        .ctrl-btn { width: 40px; height: 40px; border-radius: 50%; background: #F2F2F7; border: none; font-size: 18px; font-weight: 600; cursor: pointer; }
+
+        .tab-container { display: flex; gap: 8px; width: 100%; margin-bottom: 15px; }
+        .tab {
+            flex: 1; padding: 10px; border-radius: 10px;
+            background: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.5);
+            text-align: center; font-weight: 600; font-size: 14px; color: var(--text-secondary);
+            cursor: pointer; transition: 0.2s;
+        }
+        .tab.active { background: #FFF; color: #000; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+
+        .list-container { display: flex; flex-direction: column; gap: 12px; }
+
+        .fixed-footer {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 140px; 
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(to top, rgba(242,242,247,0.95) 30%, rgba(242,242,247,0));
+            pointer-events: none; z-index: 50; padding-bottom: 20px;
+        }
+        .action-btn {
+            pointer-events: auto; background: #1C1C1E; color: white; border: none;
+            padding: 16px 50px; border-radius: 50px;
+            font-weight: 700; font-size: 14px; letter-spacing: 0.5px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); cursor: pointer; transition: 0.2s;
+        }
+        .action-btn:active { transform: scale(0.95); }
+        .action-btn.light { background: #FFF; color: #000; border: 1px solid #E5E5EA; }
+
+        .mantra-text { font-size: 24px; font-weight: 800; color: #AF52DE; text-align: center; line-height: 1.3; padding: 20px; }
+
+        /* FORCE RESET BUTTON */
+        .reset-block {
+            margin-top: 40px; padding-bottom: 40px; text-align: center; opacity: 0.4; transition: opacity 0.3s;
+        }
+        .reset-block:hover { opacity: 1; }
+        .reset-btn {
+            background: transparent; border: 1px solid #FF3B30; color: #FF3B30;
+            padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: 700;
+            cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="app-root">
+    
+    <div class="view-layer" id="viewDashboard">
+        <div class="sticky-header">
+            <div class="user-block">
+                <h1>Hello,</h1>
+                <div id="userName" contenteditable="true" spellcheck="false">User</div>
+            </div>
+            <div class="date-pill" id="dashDate">...</div>
+        </div>
+
+        <div class="view-content">
+            <div class="glass-card t-cal">
+                <div class="card-strip"></div>
+                <div class="card-content">
+                    <div class="card-label">Daily Calories</div>
+                    <div style="font-size:32px; font-weight:800; margin-bottom:5px;">
+                        <span id="calCurrent">0</span> <span style="font-size:18px; color:#999;">/ 1,800 kcal</span>
+                    </div>
+                    <div class="progress-track"><div class="progress-fill" style="background:var(--col-cal)" id="calProgress"></div></div>
+                </div>
+            </div>
+
+            <div class="glass-card activity-widget t-cardio" id="actWidget">
+                <div class="card-strip" id="actStrip" style="background:var(--col-cardio); transition:0.3s;"></div>
+                <div class="card-content">
+                    <div class="act-toggle-container">
+                        <div class="toggle-slider" id="actSlider"></div>
+                        <div class="toggle-btn active" id="btnCardio" onclick="setActivity('cardio')">Cardio</div>
+                        <div class="toggle-btn" id="btnSteps" onclick="setActivity('steps')">Steps</div>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                        <div>
+                            <span style="font-size:32px; font-weight:800;" id="actValue">0</span>
+                            <span style="font-size:14px; font-weight:700; color:#8E8E93;" id="actUnit">min</span>
+                        </div>
+                        <div style="font-size:13px; font-weight:600; color:#8E8E93;">Target: <span id="actMax">30</span></div>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="actProgress" style="background:var(--col-cardio)"></div>
+                    </div>
+
+                    <div class="act-controls">
+                        <button class="ctrl-btn" onclick="adjustActivity(-1)">-</button>
+                        <button class="ctrl-btn" onclick="adjustActivity(1)">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="glass-card grid-item t-meal" onclick="openDiet()">
+                    <div class="card-strip"></div>
+                    <div class="card-content">
+                        <div style="color:var(--col-meal); margin-bottom:8px;">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg>
+                        </div>
+                        <div class="card-label">Meal Plan</div>
+                        <div style="font-weight:700; font-size:16px;">Track Diet</div>
+                        <div style="font-size:13px; color:#8E8E93;">View Menu</div>
+                    </div>
+                </div>
+
+                <div class="glass-card grid-item t-gym" onclick="openGym()">
+                    <div class="card-strip"></div>
+                    <div class="card-content">
+                        <div style="color:var(--col-gym); margin-bottom:8px;">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5v14h3v-6h6v6h3V5h-3v6H9V5zM3 6h2v12H3zM19 6h2v12h-2z"/></svg>
+                        </div>
+                        <div class="card-label">Workout</div>
+                        <div style="font-weight:700; font-size:16px;" id="dashWorkoutName">Rest Day</div>
+                        <div style="font-size:13px; color:#8E8E93;">Start Session</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid" style="margin-top:0;">
+                <div class="glass-card grid-item t-mantra" onclick="openMantra()">
+                    <div class="card-strip"></div>
+                    <div class="card-content">
+                        <div style="color:var(--col-mantra); margin-bottom:8px;">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                        </div>
+                        <div class="card-label">Daily Mantra</div>
+                        <div style="font-weight:700; font-size:16px;">Focus</div>
+                        <div style="font-size:13px; color:#8E8E93;">Mindset</div>
+                    </div>
+                </div>
+
+                <div class="glass-card grid-item t-study" onclick="openStudy()">
+                    <div class="card-strip"></div>
+                    <div class="card-content">
+                        <div style="color:var(--col-study); margin-bottom:8px;">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
+                        </div>
+                        <div class="card-label">Study Mode</div>
+                        <div style="font-weight:700; font-size:16px;">Tasks</div>
+                        <div style="font-size:13px; color:#8E8E93;">Productivity</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="reset-block">
+                <button class="reset-btn" onclick="forceReset()">Force Reset App</button>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="view-layer inactive-overlay" id="viewGym">
+        <div class="sticky-header">
+            <div class="nav-row">
+                <div class="btn-back" onclick="closeOverlay('viewGym')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1C1C1E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </div>
+                <div class="date-pill" id="gymDate">Today</div>
+                <div style="width:44px;"></div>
+            </div>
+        </div>
+        <div class="view-content">
+            <div class="tab-container" id="gymTabs">
+                <div class="tab active" id="tab1" onclick="switchGymTab(1)">Push A</div>
+                <div class="tab" id="tab2" onclick="switchGymTab(2)">Push B</div>
+            </div>
+            <div class="list-container" id="gymList"></div>
+        </div>
+        <div class="fixed-footer">
+            <button class="action-btn" id="coreBtn" onclick="toggleCore()">CORE & ABS</button>
+        </div>
+    </div>
+
+    <div class="view-layer inactive-overlay" id="viewDiet">
+        <div class="sticky-header">
+            <div class="nav-row">
+                <div class="btn-back" onclick="closeOverlay('viewDiet')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1C1C1E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </div>
+                <div style="font-weight:800; font-size:16px; letter-spacing:1px;">TODAY'S MENU</div>
+                <div style="width:44px;"></div>
+            </div>
+        </div>
+        <div class="view-content">
+            <div class="list-container" id="dietList"></div>
+        </div>
+    </div>
+
+    <div class="view-layer inactive-overlay" id="viewMantra">
+        <div class="sticky-header">
+            <div class="nav-row">
+                <div class="btn-back" onclick="closeOverlay('viewMantra')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1C1C1E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </div>
+                <div style="font-weight:800; font-size:16px; letter-spacing:1px;">MANTRA</div>
+                <div style="width:44px;"></div>
+            </div>
+        </div>
+        <div class="view-content" style="display:flex; align-items:center; justify-content:center; min-height:60%;">
+            <div class="mantra-text">"The only bad workout is the one that didn't happen."</div>
+        </div>
+    </div>
+
+    <div class="view-layer inactive-overlay" id="viewStudy">
+        <div class="sticky-header">
+            <div class="nav-row">
+                <div class="btn-back" onclick="closeOverlay('viewStudy')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1C1C1E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </div>
+                <div style="font-weight:800; font-size:16px; letter-spacing:1px;">STUDY</div>
+                <div style="width:44px;"></div>
+            </div>
+        </div>
+        <div class="view-content">
+            <div class="list-container" id="studyList"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    /* INIT */
+    const now = new Date();
+    const curDayIdx = now.getDay();
+    const daysShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const daysLong = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+    document.getElementById('dashDate').innerText = `${daysShort[curDayIdx]}, ${now.getDate()}`;
+    document.getElementById('gymDate').innerText = daysLong[curDayIdx];
+
+    const uName = document.getElementById('userName');
+    if(localStorage.getItem('proUser')) uName.innerText = localStorage.getItem('proUser');
+    uName.addEventListener('input', () => localStorage.setItem('proUser', uName.innerText));
+
+    // Daily Reset Logic
+    (function dailyReset() {
+        const t = now.toDateString();
+        if(localStorage.getItem('lastLogin') !== t) {
+            Object.keys(localStorage).forEach(k => { if(k.startsWith('gym-') || k.startsWith('diet-') || k.startsWith('act-') || k.startsWith('study-')) localStorage.removeItem(k); });
+            localStorage.setItem('lastLogin', t);
+        }
+    })();
+
+    // Force Reset Logic
+    function forceReset() {
+        if(confirm("Factory Reset App? This will clear all data.")) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+
+    /* --- ACTIVITY LOGIC --- */
+    let currentActivity = 'cardio';
+    let actData = { cardio: parseInt(localStorage.getItem('act-cardio'))||0, steps: parseInt(localStorage.getItem('act-steps'))||0 };
+    const actGoals = { cardio: 30, steps: 10000 };
+    const actInc = { cardio: 5, steps: 500 };
+
+    function setActivity(type) {
+        currentActivity = type;
+        const slider = document.getElementById('actSlider');
+        const btnCardio = document.getElementById('btnCardio');
+        const btnSteps = document.getElementById('btnSteps');
+        const strip = document.getElementById('actStrip');
+        const progress = document.getElementById('actProgress');
+
+        if(type === 'cardio') {
+            slider.style.transform = 'translateX(0%)';
+            btnCardio.classList.add('active'); btnSteps.classList.remove('active');
+            strip.style.background = 'var(--col-cardio)';
+            progress.style.background = 'var(--col-cardio)';
+            document.getElementById('actUnit').innerText = 'min';
+        } else {
+            slider.style.transform = 'translateX(100%)';
+            btnCardio.classList.remove('active'); btnSteps.classList.add('active');
+            strip.style.background = 'var(--col-steps)';
+            progress.style.background = 'var(--col-steps)';
+            document.getElementById('actUnit').innerText = 'steps';
+        }
+        updateActivityUI();
+    }
+
+    function adjustActivity(dir) {
+        if(navigator.vibrate) navigator.vibrate(10);
+        const amount = actInc[currentActivity];
+        actData[currentActivity] = Math.max(0, actData[currentActivity] + (dir * amount));
+        localStorage.setItem(`act-${currentActivity}`, actData[currentActivity]);
+        updateActivityUI();
+        if(actData[currentActivity] >= actGoals[currentActivity] && dir > 0) {
+             confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 }, colors: currentActivity==='cardio'?['#FF2D55']:['#00C7BE'] });
+        }
+    }
+
+    function updateActivityUI() {
+        const val = actData[currentActivity];
+        const max = actGoals[currentActivity];
+        const pct = Math.min((val / max) * 100, 100);
+        document.getElementById('actValue').innerText = val.toLocaleString();
+        document.getElementById('actMax').innerText = max.toLocaleString();
+        document.getElementById('actProgress').style.width = `${pct}%`;
+    }
+    setActivity('cardio');
+
+    /* --- DATA --- */
+    const gymData = {
+        1: { m1: "Chest", m2: "Triceps", ex1: ["Bench Press", "Incline DB Press", "Cable Flys", "Pec Deck", "Decline Press"], ex2: ["Skullcrushers", "Rope Pushdown", "Overhead DB", "Kickbacks", "Close Grip Bench"] },
+        2: { m1: "Back", m2: "Biceps", ex1: ["Lat Pulldown", "Bent Over Row", "Seated Row", "Face Pulls", "T-Bar Row"], ex2: ["BB Curls", "Hammer Curls", "Preacher Curl", "Conc. Curl", "Cable Curl"] },
+        3: { m1: "Legs", m2: "Shoulder", ex1: ["Squat", "Leg Press", "Leg Extensions", "Hamstring Curl", "Calf Raise"], ex2: ["OH Press", "Lat Raise", "Front Raise", "Rev Pec Deck", "Shrugs"] },
+        4: { m1: "Chest", m2: "Triceps", ex1: ["Incline BB", "Flat DB Press", "Chest Press", "Landmine Press", "Svend Press"], ex2: ["Straight Bar", "Single Cable", "JM Press", "Rev Pushdown", "Diamond Press"] },
+        5: { m1: "Back", m2: "Biceps", ex1: ["Single Row", "Straight Arm", "Chest Supp Row", "Meadows Row", "Rack Pulls"], ex2: ["Incline Curl", "Spider Curl", "EZ Bar Curl", "Zottman Curl", "Bayesian Curl"] },
+        6: { m1: "Legs", m2: "Shoulder", ex1: ["RDL", "Hack Squat", "Lunges", "Glute Bridge", "Seated Calf"], ex2: ["Arnold Press", "Upright Row", "Cable Lat Raise", "Face Pulls", "Y-Raises"] },
+        0: { m1: "Rest", m2: "Recovery", ex1: ["Stretching", "Foam Roll", "Walk", "Hydrate", "Sleep"], ex2: [] }
+    };
+    const coreData = ["Pushups", "Pull-ups", "Plank (1m)", "Leg Raises", "Crunches", "Dips", "Chin-ups", "Twists"];
+    
+    const studyTasks = ["Read 10 Pages", "Review Notes", "Flashcards (20m)", "Deep Work (1h)"];
+
+    const dietDB = {
+        "Mon": { type: "Veg", meals: [
+            { t:"05:15 AM", n:"Pre-Workout", cal:100, desc:"Banana/Apple + Warm Water" },
+            { t:"08:30 AM", n:"Breakfast", cal:450, desc:"Protein Oats (50g + 1 Scoop)" },
+            { t:"11:30 AM", n:"Snack", cal:150, desc:"Roasted Chana + Green Tea" },
+            { t:"01:30 PM", n:"Lunch", cal:600, desc:"Thick Dal + 2 Roti + Salad" },
+            { t:"04:30 PM", n:"Snack", cal:200, desc:"Moong Sprouts + Fruit" },
+            { t:"08:30 PM", n:"Dinner", cal:300, desc:"Dal Soup or Sautéed Veggies" }
+        ]},
+        "Tue": { type: "Egg", meals: [
+            { t:"05:15 AM", n:"Pre-Workout", cal:100, desc:"Banana + Water" },
+            { t:"08:30 AM", n:"Breakfast", cal:450, desc:"Protein Oats + Seeds" },
+            { t:"11:30 AM", n:"Snack", cal:150, desc:"Roasted Chana" },
+            { t:"01:30 PM", n:"Lunch", cal:600, desc:"3 Egg Curry + 2 Roti" },
+            { t:"04:30 PM", n:"Snack", cal:200, desc:"3 Boiled Eggs + Fruit" },
+            { t:"08:30 PM", n:"Dinner", cal:300, desc:"Yellow Dal Soup" }
+        ]},
+        "Wed": { type: "Egg", meals: [{t:"05:15 AM", n:"Pre", cal:100, desc:"Banana"}, {t:"08:30 AM", n:"Bfast", cal:450, desc:"Oats"}, {t:"11:30 AM", n:"Snack", cal:150, desc:"Chana"}, {t:"01:30 PM", n:"Lunch", cal:600, desc:"Veg Thali"}, {t:"04:30 PM", n:"Snack", cal:200, desc:"3 Eggs"}, {t:"08:30 PM", n:"Dinner", cal:300, desc:"Soup"}] },
+        "Thu": { type: "Veg", meals: [{t:"05:15 AM", n:"Pre", cal:100, desc:"Banana"}, {t:"08:30 AM", n:"Bfast", cal:450, desc:"Oats"}, {t:"11:30 AM", n:"Snack", cal:150, desc:"Chana"}, {t:"01:30 PM", n:"Lunch", cal:600, desc:"Veg"}, {t:"04:30 PM", n:"Snack", cal:200, desc:"Sprouts"}, {t:"08:30 PM", n:"Dinner", cal:300, desc:"Salad"}] },
+        "Fri": { type: "Egg", meals: [{t:"05:15 AM", n:"Pre", cal:100, desc:"Banana"}, {t:"08:30 AM", n:"Bfast", cal:450, desc:"Oats"}, {t:"11:30 AM", n:"Snack", cal:150, desc:"Chana"}, {t:"01:30 PM", n:"Lunch", cal:600, desc:"Egg Curry"}, {t:"04:30 PM", n:"Snack", cal:200, desc:"Eggs"}, {t:"08:30 PM", n:"Dinner", cal:300, desc:"Soup"}] },
+        "Sat": { type: "Veg", meals: [{t:"05:15 AM", n:"Pre", cal:100, desc:"Banana"}, {t:"08:30 AM", n:"Bfast", cal:450, desc:"Oats"}, {t:"11:30 AM", n:"Snack", cal:150, desc:"Chana"}, {t:"01:30 PM", n:"Lunch", cal:600, desc:"Veg"}, {t:"04:30 PM", n:"Snack", cal:200, desc:"Sprouts"}, {t:"08:30 PM", n:"Dinner", cal:300, desc:"Salad"}] },
+        "Sun": { type: "Egg", meals: [{t:"05:15 AM", n:"Pre", cal:100, desc:"Banana"}, {t:"08:30 AM", n:"Bfast", cal:450, desc:"Oats"}, {t:"11:30 AM", n:"Snack", cal:150, desc:"Chana"}, {t:"01:30 PM", n:"Lunch", cal:600, desc:"Egg Curry"}, {t:"04:30 PM", n:"Snack", cal:200, desc:"Eggs"}, {t:"08:30 PM", n:"Dinner", cal:300, desc:"Soup"}] }
+    };
+
+    const todayW = gymData[curDayIdx];
+    document.getElementById('dashWorkoutName').innerText = todayW.m1 === "Rest" ? "Rest Day" : `${todayW.m1} & ${todayW.m2}`;
+
+    // --- NAVIGATION ---
+    function vibrate() { if(navigator.vibrate) navigator.vibrate(10); }
+    function openOverlay(id) {
+        vibrate(); document.getElementById('viewDashboard').classList.add('hidden');
+        document.getElementById(id).classList.remove('inactive-overlay');
+        document.getElementById(id).classList.add('active-overlay');
+        if(id === 'viewDiet') updateCalories();
+        if(id === 'viewStudy') initStudy();
+    }
+    function closeOverlay(id) {
+        vibrate(); document.getElementById('viewDashboard').classList.remove('hidden');
+        document.getElementById(id).classList.remove('active-overlay');
+        document.getElementById(id).classList.add('inactive-overlay');
+        updateCalories();
+    }
+    function openGym() { openOverlay('viewGym'); initGym(); }
+    function openDiet() { openOverlay('viewDiet'); initDiet(); }
+    function openMantra() { openOverlay('viewMantra'); }
+    function openStudy() { openOverlay('viewStudy'); }
+
+    // --- GYM ---
+    let isCore = false;
+    let gymTab = 1;
+    function initGym() { renderGymList(); }
+    function renderGymList() {
+        const list = document.getElementById('gymList');
+        const t1 = document.getElementById('tab1');
+        const t2 = document.getElementById('tab2');
+        const btn = document.getElementById('coreBtn');
+        const tabContainer = document.getElementById('gymTabs');
+        
+        list.innerHTML = '';
+
+        if(isCore) {
+            tabContainer.style.display = 'none';
+            btn.innerText = "Back to Lifting";
+            btn.classList.add('light');
+            coreData.forEach((ex, i) => createItem(list, ex, `gym-core-${i}`, "t-core", "Core Strength", "1 min"));
+        } else {
+            tabContainer.style.display = 'flex';
+            btn.innerText = "Core & Abs";
+            btn.classList.remove('light');
+            
+            t1.innerText = todayW.m1; t2.innerText = todayW.m2;
+            if(gymTab===1) { t1.classList.add('active'); t2.classList.remove('active'); }
+            else { t1.classList.remove('active'); t2.classList.add('active'); }
+
+            const exs = gymTab===1 ? todayW.ex1 : todayW.ex2;
+            if(!exs.length) list.innerHTML = `<div style="text-align:center; padding:30px; color:#999;">Rest Day</div>`;
+            else exs.forEach((ex, i) => createItem(list, ex, `gym-d${curDayIdx}-t${gymTab}-${i}`, "t-gym", gymTab===1?todayW.m1:todayW.m2, "3 Sets"));
+        }
+    }
+    function switchGymTab(n) { gymTab=n; vibrate(); renderGymList(); }
+    function toggleCore() { isCore=!isCore; vibrate(); renderGymList(); }
+
+    // --- DIET ---
+    function initDiet() { renderDietList(); }
+    function renderDietList() {
+        const list = document.getElementById('dietList');
+        list.innerHTML = '';
+        const dayKey = daysShort[curDayIdx];
+        const plan = dietDB[dayKey];
+        plan.meals.forEach((m, i) => {
+            const theme = m.n.includes('Egg') || plan.type === 'Egg' ? 't-egg' : 't-meal';
+            const finalTheme = (plan.type === 'Egg' && !m.n.includes('Egg') && !m.n.includes('Boiled')) ? 't-meal' : theme;
+            createItem(list, m.n, `diet-${dayKey}-${i}`, finalTheme, m.desc, m.t, `${m.cal} kcal`);
+        });
+    }
+
+    // --- STUDY ---
+    function initStudy() {
+        const list = document.getElementById('studyList');
+        list.innerHTML = '';
+        studyTasks.forEach((t, i) => createItem(list, t, `study-${curDayIdx}-${i}`, 't-study', 'Focus Task', 'Today'));
+    }
+
+    // --- UTILS ---
+    function updateCalories() {
+        let total = 0;
+        const dayKey = daysShort[curDayIdx];
+        const plan = dietDB[dayKey].meals;
+        plan.forEach((m, i) => { if(localStorage.getItem(`diet-${dayKey}-${i}`) === 'true') total += m.cal; });
+        const target = 1800;
+        const pct = Math.min((total / target) * 100, 100);
+        document.getElementById('calCurrent').innerText = total.toLocaleString();
+        document.getElementById('calProgress').style.width = `${pct}%`;
+    }
+
+    function createItem(parent, title, id, themeClass, subtitle = '', pillText = '', suffixText = '') {
+        const div = document.createElement('div');
+        div.className = `glass-card ${themeClass}`;
+        const isChecked = localStorage.getItem(id) === 'true';
+        if(isChecked) div.classList.add('item-completed');
+
+        let metaHtml = pillText ? `<div class="meta-tag">${pillText}</div>` : '';
+        let suffixHtml = suffixText ? `<div class="item-cal">${suffixText}</div>` : '';
+
+        div.innerHTML = `
+            <div class="card-strip"></div>
+            <div class="card-content">
+                ${metaHtml}
+                <div class="item-title">${title}</div>
+                <div class="item-desc">${subtitle}</div>
+                ${suffixHtml}
+            </div>
+            <div class="checkbox-wrapper">
+                <input type="checkbox" class="custom-checkbox" onchange="toggleCheck(this, '${id}')" ${isChecked?'checked':''}>
+            </div>
+        `;
+        parent.appendChild(div);
+    }
+
+    window.toggleCheck = function(el, id) {
+        localStorage.setItem(id, el.checked);
+        const card = el.closest('.glass-card');
+        if(el.checked) {
+            card.classList.add('item-completed');
+            if(navigator.vibrate) navigator.vibrate(50);
+            const r = el.getBoundingClientRect();
+            let colors = ['#007AFF', '#34C759'];
+            if(id.includes('study')) colors = ['#5856D6', '#FFF'];
+            confetti({ particleCount: 40, spread: 50, origin: { x: (r.left+10)/window.innerWidth, y: r.top/window.innerHeight }, colors: colors });
+        } else {
+            card.classList.remove('item-completed');
+            vibrate();
+        }
+        updateCalories();
+    }
+
+    updateCalories();
+</script>
+</body>
+</html>
