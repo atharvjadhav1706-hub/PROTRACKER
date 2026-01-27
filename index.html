@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fitness Pro - Muscle Library</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        /* --- THEME ENGINE --- */
+        body { 
+            background-color: #050505; 
+            background-image: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000000 95%);
+            color: #f8fafc; 
+            overscroll-behavior-y: none; 
+            -webkit-tap-highlight-color: transparent; 
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+            touch-action: pan-y;
+        }
+
+        .layer-boost { transform: translateZ(0); will-change: transform; }
+
+        /* CARDS */
+        .glass-card {
+            background: #0f0f0f; 
+            border: 1px solid #1f1f1f;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden; 
+        }
+        .glass-card:active { background: #1a1a1a; transform: scale(0.99); transition: all 0.1s ease; }
+
+        /* ACCENTS */
+        .accent-green { border-left: 4px solid #10b981; }
+        .accent-orange { border-left: 4px solid #f97316; }
+        .accent-purple { border-left: 4px solid #a855f7; }
+        .accent-pink { border-left: 4px solid #ec4899; }
+        .accent-blue { border-left: 4px solid #3b82f6; }
+        .accent-yellow { border-left: 4px solid #eab308; }
+
+        /* WATERMARKS */
+        .bg-watermark {
+            position: absolute;
+            right: -15px;
+            bottom: -15px;
+            width: 120px;
+            height: 120px;
+            opacity: 0.07;
+            pointer-events: none;
+            fill: white;
+            z-index: 0; 
+        }
+        
+        .modal-watermark {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: auto;
+            opacity: 0.04;
+            pointer-events: none;
+            fill: white;
+            z-index: 0;
+        }
+
+        /* INPUTS */
+        .glass-input {
+            background: #111;
+            border: 1px solid #333;
+            color: white;
+            font-size: 16px; 
+            border-radius: 12px;
+        }
+        .glass-input:focus { border-color: #3b82f6; background: #161616; outline: none; }
+
+        .grad-pill {
+            background: linear-gradient(135deg, #2563eb, #4f46e5);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .glass-active-tab {
+            background: #1e1b4b;
+            border: 1px solid #4f46e5;
+            color: white; 
+        }
+
+        .modal-bg { background-color: #000000; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        input:focus { outline: none; }
+        * { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        
+        /* TIMELINE */
+        .history-item::before {
+            content: ''; position: absolute; left: 11px; top: 40px; bottom: -20px;
+            width: 2px; background: #222;
+        }
+        .history-item:last-child::before { display: none; }
+
+        /* CHECKBOX ANIMATION */
+        .check-circle {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 pb-36 select-none layer-boost">
+
+    <div class="flex flex-col gap-6 max-w-md mx-auto relative z-10">
+
+        <div class="flex items-center justify-between pt-2 px-1">
+            <div class="flex flex-col justify-center">
+                <label class="text-[10px] font-bold text-gray-500 tracking-[0.2em] mb-1">WELCOME BACK,</label>
+                <input type="text" id="userNameInput" value="USER" onchange="saveData()" class="bg-transparent text-3xl font-black uppercase w-56 text-white border-none p-0 leading-none truncate focus:text-blue-500">
+            </div>
+        </div>
+
+        <div class="glass-card accent-orange p-5">
+            <svg class="bg-watermark" viewBox="0 0 24 24"><path d="M12 23a7.5 7.5 0 0 1-5.138-12.963C8.202 7.087 11.021 2.721 11 2.747c.025.26 0 .43-.18 1.066C10.124 5.624 9.475 7.5 10.5 8.75c.746.91 1.996.129 2.5.5.905.666.95 2.166-.86 3.75-2.25 1.968-1.547 3.937-.5 5.5 1.047 1.563 2.86 1.75 3.36 1.75A7.48 7.48 0 0 1 12 23z"/></svg>
+            
+            <div class="z-content flex items-center justify-between">
+                <div><p class="text-[10px] font-bold text-gray-500 tracking-[0.15em] uppercase mb-1">Streak</p><div class="flex items-center gap-3"><span id="streakCount" class="text-5xl font-black italic text-white tracking-tighter">0</span><span class="text-3xl">🔥</span></div></div>
+                <div class="text-[9px] font-bold text-gray-600 text-right leading-tight tracking-wide">CONSISTENCY<br>IS THE<br>KEY</div>
+            </div>
+        </div>
+
+        <div onclick="openGymModal()" class="glass-card accent-green cursor-pointer p-6 active:scale-98 transition-transform">
+            <svg class="bg-watermark" viewBox="0 0 24 24"><path d="M6 5v14h3v-6h6v6h3V5h-3v6H9V5z"/></svg>
+
+            <div class="z-content flex justify-between items-center">
+                <div class="flex-1 pr-4">
+                    <h2 class="text-2xl font-black italic tracking-tighter uppercase text-white mb-2">Gym Workout</h2>
+                    <div id="todayPreview" class="text-[10px] font-bold text-emerald-400 uppercase tracking-[0.2em]"></div>
+                </div>
+                <div class="relative w-16 h-16 shrink-0">
+                    <svg class="w-full h-full -rotate-90">
+                        <circle cx="32" cy="32" r="28" stroke="#333" stroke-width="6" fill="transparent" />
+                        <circle id="circleRing" cx="32" cy="32" r="28" stroke="#10b981" stroke-width="6" fill="transparent" class="transition-all duration-700" stroke-dasharray="175" stroke-dashoffset="175" stroke-linecap="round"/>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center"><span id="gymPercent" class="text-[10px] font-bold text-white">0%</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div onclick="openCoreModal('general')" class="glass-card accent-purple flex flex-col justify-between h-36 cursor-pointer p-5 pl-6 active:scale-95 transition-transform">
+                <svg class="bg-watermark" style="width:80px; height:80px; right:-5px; bottom:-5px;" viewBox="0 0 24 24"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
+                
+                <div class="z-content">
+                    <span class="text-[10px] font-bold tracking-[0.2em] uppercase text-gray-500 block mb-1">DAILY</span>
+                    <span class="text-2xl font-black text-white">CORE</span>
+                </div>
+                <div class="z-content w-full bg-[#222] h-1.5 rounded-full overflow-hidden"><div id="coreProgressBar" class="bg-purple-600 h-full w-0 transition-all duration-500"></div></div>
+                <div class="z-content flex items-center gap-1 text-[9px] font-bold text-gray-500">3 EXERCISES</div>
+            </div>
+
+            <div onclick="openCoreModal('abs')" class="glass-card accent-pink flex flex-col justify-between h-36 cursor-pointer p-5 pl-6 active:scale-95 transition-transform">
+                <svg class="bg-watermark" style="width:80px; height:80px; right:-5px; bottom:-5px;" viewBox="0 0 24 24"><path d="M4 4h16v16H4V4zm2 2v12h12V6H6z"/></svg>
+
+                <div class="z-content">
+                    <span class="text-[10px] font-bold tracking-[0.2em] uppercase text-gray-500 block mb-1">TRAINING</span>
+                    <span class="text-2xl font-black text-white">ABS</span>
+                </div>
+                <div class="z-content w-full bg-[#222] h-1.5 rounded-full overflow-hidden"><div id="absProgressBar" class="bg-pink-600 h-full w-0 transition-all duration-500"></div></div>
+                <div class="z-content flex items-center gap-1 text-[9px] font-bold text-gray-500">LEVELS</div>
+            </div>
+        </div>
+
+        <div onclick="openLibraryModal()" class="glass-card accent-yellow w-full p-5 cursor-pointer active:scale-98 transition-transform">
+             <svg class="bg-watermark" viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
+             <div class="z-content flex justify-between items-center">
+                <div>
+                    <span class="text-[10px] font-bold tracking-[0.2em] uppercase text-gray-500 block mb-1">REFERENCE</span>
+                    <span class="text-xl font-black text-white">ALL EXERCISES</span>
+                </div>
+                <div class="w-10 h-10 bg-[#111] border border-[#222] rounded-full flex items-center justify-center text-yellow-500">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                </div>
+             </div>
+        </div>
+
+        <div onclick="openWeightModal()" class="glass-card accent-blue w-full p-6 cursor-pointer active:scale-98 transition-transform">
+            <svg class="bg-watermark" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
+
+            <div class="z-content flex justify-between items-center">
+                <div>
+                    <span class="text-[10px] font-bold tracking-[0.2em] uppercase text-gray-500">BODY WEIGHT</span>
+                    <div class="flex items-baseline mt-1"><span id="displayWeight" class="text-3xl font-black text-white tracking-tighter">--</span><span class="text-xs font-bold text-gray-500 ml-1">KG</span></div>
+                </div>
+                <div class="w-12 h-12 bg-[#111] border border-[#222] rounded-full flex items-center justify-center text-gray-400"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="fullscreenTimer" class="fixed inset-0 z-[100] hidden modal-bg flex-col justify-between p-4 overflow-hidden">
+        <button onclick="resetTimer()" class="absolute top-6 right-6 w-12 h-12 bg-[#111] rounded-full border border-[#222] flex items-center justify-center active:scale-90 transition-transform z-50">
+            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+
+        <div class="w-full text-center mt-12 z-20">
+            <h2 id="timerTitle" class="text-5xl font-black text-white tracking-widest uppercase text-glow">RESTING</h2>
+        </div>
+
+        <div class="flex-1 w-full flex items-center justify-center relative min-h-0">
+            <div id="timerContainer" class="relative w-full aspect-square max-h-[55vh] flex items-center justify-center hidden">
+                <svg class="w-full h-full absolute inset-0" style="transform: rotate(-90deg);" viewBox="0 0 320 320">
+                    <circle cx="160" cy="160" r="140" stroke="#1a1a1a" stroke-width="12" fill="transparent" />
+                    <circle id="timerProgressRing" cx="160" cy="160" r="140" stroke="#3b82f6" stroke-width="12" fill="transparent" stroke-dasharray="880" stroke-dashoffset="0" stroke-linecap="round" />
+                </svg>
+                <span id="overlayTimerDisplay" class="text-7xl font-black text-white tracking-tighter relative z-10 text-glow">00:00</span>
+            </div>
+
+            <div id="restSelector" class="hidden w-full max-w-sm grid grid-cols-2 gap-4 z-30 px-4">
+                 <button onclick="startTimerInterval(30, 'RESTING'); hideRestSelector()" class="bg-[#111] border border-[#222] text-white font-black text-3xl py-10 rounded-2xl active:bg-[#1a1a1a] flex items-center justify-center shadow-lg">30s</button>
+                 <button onclick="startTimerInterval(60, 'RESTING'); hideRestSelector()" class="bg-[#111] border border-[#222] text-white font-black text-3xl py-10 rounded-2xl active:bg-[#1a1a1a] flex items-center justify-center shadow-lg">1m</button>
+                 <button onclick="startTimerInterval(90, 'RESTING'); hideRestSelector()" class="bg-[#111] border border-[#222] text-white font-black text-3xl py-10 rounded-2xl active:bg-[#1a1a1a] flex items-center justify-center shadow-lg">1.5m</button>
+                 <button onclick="startTimerInterval(120, 'RESTING'); hideRestSelector()" class="bg-[#111] border border-[#222] text-white font-black text-3xl py-10 rounded-2xl active:bg-[#1a1a1a] flex items-center justify-center shadow-lg">2m</button>
+            </div>
+        </div>
+        <div class="h-10"></div>
+    </div>
+
+    <div id="workoutModal" class="fixed inset-0 z-50 hidden flex flex-col modal-bg">
+        <div class="p-4 flex-shrink-0 flex justify-between items-center border-b border-[#222] bg-black z-50">
+            <div class="mr-auto">
+                <div class="grad-pill px-4 py-2 rounded-full">
+                    <span id="modalDay" class="text-sm font-black uppercase tracking-widest text-white"></span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="btnHistory" onclick="openHistoryModal()" class="w-10 h-10 rounded-full bg-[#111] border border-[#222] text-gray-300 flex items-center justify-center active:bg-[#1a1a1a]">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                </button>
+                <button onclick="showRestSelector()" class="h-10 pl-3 pr-4 rounded-full bg-[#111] border border-[#222] text-slate-300 flex items-center gap-2 active:bg-[#1a1a1a]">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span class="text-[10px] font-black tracking-widest">REST</span>
+                </button>
+                <button onclick="closeModal()" class="w-10 h-10 rounded-full bg-[#111] border border-[#222] text-slate-300 flex items-center justify-center font-bold active:bg-[#1a1a1a]">✕</button>
+            </div>
+        </div>
+        
+        <div class="p-4 overflow-y-auto flex-grow pb-20 relative">
+             <div id="modalTabs" class="flex gap-2 mb-6 relative z-10"></div>
+             <div id="modalExercises" class="flex flex-col gap-4 relative z-10"></div>
+        </div>
+    </div>
+
+    <div id="historyModal" class="fixed inset-0 z-[60] hidden flex flex-col modal-bg">
+        <div class="p-6 flex-shrink-0 flex justify-between items-center border-b border-[#222] bg-black">
+            <h2 class="text-lg font-black uppercase text-white tracking-tight">History Log</h2>
+            <button onclick="document.getElementById('historyModal').classList.add('hidden'); document.getElementById('historyModal').classList.remove('flex');" class="w-10 h-10 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center font-bold hover:bg-[#222]">✕</button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-grow pb-32 relative">
+             <svg class="modal-watermark" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+             <div id="historyLogContainer" class="flex flex-col gap-6 relative z-10"></div>
+        </div>
+    </div>
+
+    <div id="weightModal" class="fixed inset-0 z-50 hidden flex flex-col modal-bg">
+        <div class="p-6 flex-shrink-0 flex justify-between items-center border-b border-[#222] bg-black"><h2 class="text-lg font-black uppercase text-white">Report</h2><button onclick="document.getElementById('weightModal').classList.add('hidden'); document.getElementById('weightModal').classList.remove('flex');" class="w-10 h-10 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center font-bold hover:bg-[#222]">✕</button></div>
+        
+        <div class="p-6 overflow-y-auto flex-grow pb-20 relative">
+            <svg class="modal-watermark" style="opacity:0.02;" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
+
+            <div class="grid grid-cols-3 gap-3 mb-6 relative z-10">
+                <div class="glass-card p-3 rounded-xl flex flex-col items-center">
+                    <span class="text-[9px] font-bold text-gray-500 uppercase">Current</span>
+                    <span id="statCurrent" class="text-lg font-black text-white mt-1">--</span>
+                </div>
+                <div class="glass-card p-3 rounded-xl flex flex-col items-center">
+                    <span class="text-[9px] font-bold text-gray-500 uppercase">Start</span>
+                    <span id="statStart" class="text-lg font-black text-white mt-1">--</span>
+                </div>
+                <div class="glass-card p-3 rounded-xl flex flex-col items-center">
+                    <span class="text-[9px] font-bold text-gray-500 uppercase">Change</span>
+                    <span id="statChange" class="text-lg font-black text-green-500 mt-1">--</span>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-5 mb-8 relative overflow-hidden z-10">
+                <div class="flex justify-between items-start mb-6 relative z-10">
+                    <div><h3 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-1">CURRENT WEIGHT</h3><span id="modalCurrentWeight" class="text-3xl font-black text-white tracking-tight">--</span></div>
+                    <button onclick="document.getElementById('addWeightSection').classList.toggle('hidden')" class="w-10 h-10 bg-blue-600 rounded-lg text-white flex items-center justify-center shadow-lg active:scale-95"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></button>
+                </div>
+                <div id="addWeightSection" class="hidden mb-6 bg-[#111] p-4 rounded-xl border border-[#222]"><div class="flex gap-3"><input type="date" id="weightDateInput" class="flex-1 glass-input rounded-lg p-3 font-bold text-sm"><input type="number" id="newWeightInput" placeholder="KG" class="w-24 glass-input rounded-lg p-3 font-black text-center"></div><button onclick="logNewWeight()" class="w-full mt-3 bg-blue-600 text-white py-3 rounded-lg font-bold uppercase text-xs tracking-widest">Update Log</button></div>
+                <div class="relative w-full h-48"><div id="chartBubble" class="absolute bg-[#222] text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-xl -translate-x-1/2 -translate-y-full transition-all duration-500 border border-[#333]" style="left: 50%; top: 50%;">--</div><svg id="weightChart" class="w-full h-full overflow-visible" preserveAspectRatio="none"><defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.4"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/></linearGradient></defs><path id="chartArea" d="" fill="url(#chartFill)" /><path id="chartLine" d="" fill="none" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><g id="chartDots"></g></svg></div>
+            </div>
+            
+            <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 relative z-10">HISTORY</h3>
+            <div id="historyList" class="flex flex-col gap-0 relative pb-10 z-10"></div>
+        </div>
+    </div>
+
+    <div id="deleteModal" class="fixed inset-0 z-[80] bg-black/80 hidden items-center justify-center"><div class="glass-card p-6 rounded-2xl shadow-2xl max-w-xs w-full text-center border border-[#333]"><h3 class="text-lg font-black text-white mb-4">Delete Entry?</h3><div class="flex gap-3"><button onclick="document.getElementById('deleteModal').classList.add('hidden'); document.getElementById('deleteModal').classList.remove('flex');" class="flex-1 py-3 bg-[#222] text-white rounded-xl font-bold">Cancel</button><button onclick="confirmDelete()" class="flex-1 py-3 bg-red-600 rounded-xl font-bold text-white">Delete</button></div></div></div>
+
+    <script>
+        const today = new Date();
+        const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+        const dayName = days[today.getDay()];
+        const dateKey = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, '0') + "-" + String(today.getDate()).padStart(2, '0');
+
+        const workouts = {
+            'MONDAY': { tabs: ['Chest', 'Triceps'], ex: [['Bench Press', 'Incline Press', 'Chest Fly', 'Cable Crossover', 'Dumbbell Pullover', 'Svend Press'], ['Skullcrushers', 'Rope Pushdown', 'Overhead Ext', 'Close Grip', 'Machine Dip', 'Kickbacks']] },
+            'TUESDAY': { tabs: ['Back', 'Biceps'], ex: [['Lat Pulldown', 'Cable Row', 'T-Bar Row', 'Single Arm Row', 'Face Pulls', 'Straight Arm Pulldown'], ['Barbell Curl', 'Hammer Curl', 'Preacher Curl', 'Cable Curl', 'Conc. Curl', 'Incline Curl']] },
+            'WEDNESDAY': { tabs: ['Legs', 'Shoulders'], ex: [['Leg Press', 'Hack Squat', 'Leg Extensions', 'Leg Curls', 'Calf Raise', 'Lunges'], ['Overhead Press', 'Lat Raise', 'Front Raise', 'Rear Delt Fly', 'Shrugs', 'Upright Row']] },
+            'THURSDAY': { tabs: ['Chest Var', 'Triceps Var'], ex: [['Dumbbell Bench', 'Hammer Incline', 'Low Cable Fly', 'Smith Machine Press', 'Pec Deck', 'Landmine Press'], ['V-Bar Pushdown', 'French Press', 'Rev Grip Pushdown', 'Single Arm Ext', 'Dips', 'Close Grip Press']] },
+            'FRIDAY': { tabs: ['Back Var', 'Biceps Var'], ex: [['Reverse Grip Lat Pulldown', 'Bent Over Row', 'Meadows Row', 'Seated Row', 'Machine High Row', 'Rope Face Pull'], ['Spider Curl', 'Zottman Curl', 'EZ Bar Curl', 'Bayesian Curl', 'Cross Body Curl', 'Reverse Curl']] },
+            'SATURDAY': { tabs: ['Legs Var', 'Shoulders Var'], ex: [['Goblet Squat', 'Romanian Deadlift', 'Split Squat', 'Hip Thrust', 'Seated Calf Raise', 'Step Ups'], ['Arnold Press', 'Cable Lat Raise', 'Face Pull', 'Machine Press', 'Lateral Raise Machine', 'Front Plate Raise']] },
+            'SUNDAY': { tabs: ['Rest', 'Recovery'], ex: [[], []] }
+        };
+
+        const coreExercises = ['Pushups', 'Pullups', 'Squats'];
+        
+        const absLevels = {
+            'beginner': [ { name: 'Jumping Jacks', time: '00:30', seconds: 30 }, { name: 'Mountain Climbers', reps: '20' }, { name: 'Heel Touch', reps: '20' }, { name: 'Plank', time: '00:30', seconds: 30 }, { name: 'Cobra Stretch', time: '00:30', seconds: 30 } ],
+            'intermediate': [ { name: 'Crunches', reps: '20' }, { name: 'Leg Raises', reps: '15' }, { name: 'Russian Twist', reps: '24' }, { name: 'Flutter Kicks', time: '00:30', seconds: 30 }, { name: 'Plank Jacks', reps: '15' }, { name: 'Side Plank', time: '00:30', seconds: 30 } ],
+            'advanced': [ { name: 'Bicycle Crunches', reps: '24' }, { name: 'V-Ups', reps: '15' }, { name: 'Hollow Body', time: '00:45', seconds: 45 }, { name: 'Side Plank', time: '00:45', seconds: 45 }, { name: 'Sit-ups', reps: '30' }, { name: 'Dead Bug', reps: '20' } ]
+        };
+
+        const videoLinks = { 
+            // Tuesday (Back & Biceps) Google Drive Links
+            'Lat Pulldown': 'https://drive.google.com/file/d/1Wx9GR8tQBjgXC4NIiZz3o3qhbIW8IslQ/view?usp=drive_link',
+            'Cable Row': 'https://drive.google.com/file/d/1r02mXKDIcTCPTctnXe9dBGQAFE92PNSa/view?usp=drive_link',
+            'T-Bar Row': 'https://drive.google.com/file/d/1Sijwsg570aRP69b-B4VsrBvk7blwq4FT/view?usp=drive_link',
+            'Single Arm Row': 'https://drive.google.com/file/d/1cPECfuQJc65vgsIEoHhfK0gISUWWPO5_/view?usp=drive_link',
+            'Face Pulls': 'https://drive.google.com/file/d/17rNf331dqqA7uNpEgRL8s-wIT-TrmoKS/view?usp=drive_link',
+            'Straight Arm Pulldown': 'https://drive.google.com/file/d/1w0oLL1XRSWQNNo1HPH2iz-F1Nc7ecYNJ/view?usp=drive_link',
+            'Barbell Curl': 'https://drive.google.com/file/d/1f_PIQzgnLl2udNt3pw5CcL2JdJ57bXK8/view?usp=drive_link',
+            'Hammer Curl': 'https://drive.google.com/file/d/10oJezr3Cui838Ba-yYstjsHX5kRrW68M/view?usp=drive_link',
+            'Preacher Curl': 'https://drive.google.com/file/d/1v_SOIlzsCfdw9bL5bIhjrA7OATByb_Jc/view?usp=drive_link',
+            'Cable Curl': 'https://drive.google.com/file/d/1Vbn-5CPdWKs0zGt2jVePnCUrqFEIB0wj/view?usp=drive_link',
+            'Conc. Curl': 'https://drive.google.com/file/d/1iwPEMH0TjycvUZ-cYZF3itvDu3oRBA4Y/view?usp=drive_link',
+            'Incline Curl': 'https://drive.google.com/file/d/18MT3C_f8aGzysXCiK6l4pQmVNO5n_pun/view?usp=drive_link'
+        };
+
+        let currentTab = 0, streak = 0, streakLocked = false;
+        let userName = "USER";
+        let exerciseData = {}; weightHistory = []; deleteIndex = -1; 
+        let isCoreMode = false;
+        let isLibraryMode = false;
+        let libraryData = {}; // Temporary data for library view
+        let activeAbsLevel = null;
+        let absViewMode = 'levels'; 
+
+        let timerInterval = null; let timerEndTime = null; let timerTotalDuration = 0;
+        let timerTargetExercise = null; 
+        let wakeLock = null;
+
+        async function requestWakeLock() {
+            try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) { console.log(err); }
+        }
+
+        async function releaseWakeLock() {
+            if (wakeLock !== null) { await wakeLock.release(); wakeLock = null; }
+        }
+
+        if ("Notification" in window) { Notification.requestPermission(); }
+
+        function showRestSelector() {
+            document.getElementById('fullscreenTimer').classList.remove('hidden'); document.getElementById('fullscreenTimer').classList.add('flex');
+            document.getElementById('restSelector').classList.remove('hidden'); document.getElementById('restSelector').classList.add('grid');
+            document.getElementById('timerContainer').classList.add('hidden');
+            document.getElementById('timerTitle').innerText = "SELECT REST";
+        }
+        function hideRestSelector() {
+            document.getElementById('restSelector').classList.add('hidden'); document.getElementById('restSelector').classList.remove('grid');
+            document.getElementById('timerContainer').classList.remove('hidden');
+        }
+        function startTimerInterval(customSeconds, labelText = "") {
+            timerTotalDuration = customSeconds; timerEndTime = Date.now() + (customSeconds * 1000); 
+            timerTargetExercise = labelText; 
+            saveData();
+            requestWakeLock(); 
+            const titleEl = document.getElementById("timerTitle");
+            if (labelText) { titleEl.innerText = labelText.toUpperCase(); } else { titleEl.innerText = "RESTING"; }
+            document.getElementById('fullscreenTimer').classList.remove('hidden'); document.getElementById('fullscreenTimer').classList.add('flex');
+            checkTimerTick();
+            if (timerInterval) clearInterval(timerInterval); timerInterval = setInterval(checkTimerTick, 100); 
+        }
+        function checkTimerTick() {
+            if(!timerEndTime) return;
+            const now = Date.now();
+            const remainingMs = timerEndTime - now;
+            const remainingSec = Math.ceil(remainingMs / 1000);
+            if (remainingSec > 0) {
+                const m = Math.floor(remainingSec / 60); const s = remainingSec % 60;
+                document.getElementById('overlayTimerDisplay').innerText = `${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+                const circumference = 880; const offset = circumference - (remainingMs / (timerTotalDuration * 1000)) * circumference;
+                document.getElementById('timerProgressRing').style.strokeDashoffset = offset;
+            } else { finishTimer(); }
+        }
+        function finishTimer() {
+            clearInterval(timerInterval); timerInterval = null; timerEndTime = null; 
+            
+            if (isCoreMode && timerTargetExercise) { toggleExerciseComplete(timerTargetExercise); }
+            timerTargetExercise = null;
+            saveData();
+            releaseWakeLock(); 
+
+            confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 }, zIndex: 9999, colors: ['#3b82f6', '#ffffff'] });
+            
+            if(navigator.vibrate) navigator.vibrate([600, 300, 600]);
+            
+            if (document.visibilityState === 'hidden' && "Notification" in window && Notification.permission === "granted") {
+                new Notification("Rest Finished!", { body: "Time to get back to work!", vibrate: [600, 300, 600] });
+            }
+            
+            document.getElementById('fullscreenTimer').classList.add('hidden'); document.getElementById('fullscreenTimer').classList.remove('flex');
+        }
+        function resetTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = null; timerEndTime = null; saveData(); 
+            releaseWakeLock();
+            document.getElementById('fullscreenTimer').classList.add('hidden'); document.getElementById('fullscreenTimer').classList.remove('flex');
+            document.getElementById('restSelector').classList.add('hidden');
+        }
+        function restoreTimer() {
+            if (timerEndTime) {
+                const now = Date.now();
+                if (timerEndTime > now) { 
+                    const remaining = Math.ceil((timerEndTime - now) / 1000);
+                    timerTotalDuration = remaining + 1; 
+                    document.getElementById('restSelector').classList.add('hidden');
+                    document.getElementById('timerContainer').classList.remove('hidden');
+                    const savedTarget = timerTargetExercise;
+                    startTimerInterval(remaining, savedTarget || "RESUMED");
+                } else { timerEndTime = null; saveData(); }
+            }
+        }
+
+        function init() {
+            loadData();
+            document.getElementById('todayPreview').innerText = workouts[dayName].tabs.length ? `${workouts[dayName].tabs[0]} & ${workouts[dayName].tabs[1]}` : "REST";
+            document.getElementById('userNameInput').value = userName;
+            document.getElementById('weightDateInput').valueAsDate = new Date();
+            calcTotalProgress(); updateCoreProgress(); refreshWeightUI(); restoreTimer(); cleanOldHistory();
+        }
+
+        function cleanOldHistory() {
+            const historyMap = {}; 
+            Object.keys(exerciseData).filter(k => k.match(/^\d{4}-\d{2}-\d{2}$/)).forEach(date => {
+                const dayIdx = new Date(date).getDay();
+                if(!historyMap[dayIdx]) historyMap[dayIdx] = [];
+                historyMap[dayIdx].push(date);
+            });
+            let changed = false;
+            for(let dayIdx in historyMap) {
+                const dates = historyMap[dayIdx].sort((a,b) => new Date(b) - new Date(a)); 
+                if (dates.length > 4) {
+                    const toRemove = dates.slice(4); toRemove.forEach(d => { delete exerciseData[d]; changed = true; });
+                }
+            }
+            if(changed) saveData();
+        }
+
+        function saveData() {
+            const data = { 
+                date: dateKey, 
+                user: document.getElementById('userNameInput').value, 
+                exerciseData: exerciseData, 
+                weightHistory: weightHistory, 
+                streak: streak, 
+                streakLocked: streakLocked, 
+                timerEndTime: timerEndTime, 
+                timerTargetExercise: timerTargetExercise 
+            };
+            try { localStorage.setItem('fitnessProFinal', JSON.stringify(data)); } catch(e) {}
+        }
+
+        function loadData() {
+            const raw = localStorage.getItem('fitnessProFinal');
+            if(raw) {
+                const data = JSON.parse(raw);
+                userName = data.user || "USER"; 
+                exerciseData = data.exerciseData || {}; weightHistory = data.weightHistory || []; streak = data.streak || 0;
+                timerEndTime = data.timerEndTime || null;
+                timerTargetExercise = data.timerTargetExercise || null; 
+                if(data.date === dateKey) { streakLocked = data.streakLocked || false; } else { streakLocked = false; saveData(); }
+            }
+        }
+
+        function updateCoreProgress() {
+            let coreTotal = coreExercises.length;
+            let coreDone = 0;
+            coreExercises.forEach(ex => { if(exerciseData[dateKey] && exerciseData[dateKey][ex] && exerciseData[dateKey][ex].completed) coreDone++; });
+            document.getElementById('coreProgressBar').style.width = (coreDone / coreTotal * 100) + '%';
+
+            let absTotal = 3; let absDone = 0;
+            if (activeAbsLevel) {
+               absLevels[activeAbsLevel].forEach(ex => { if(exerciseData[dateKey] && exerciseData[dateKey][ex.name] && exerciseData[dateKey][ex.name].completed) absDone++; });
+               document.getElementById('absProgressBar').style.width = (absDone / absLevels[activeAbsLevel].length * 100) + '%';
+            } else {
+               absLevels['beginner'].forEach(ex => { if(exerciseData[dateKey] && exerciseData[dateKey][ex.name] && exerciseData[dateKey][ex.name].completed) absDone++; });
+               document.getElementById('absProgressBar').style.width = (absDone / absLevels['beginner'].length * 100) + '%';
+            }
+        }
+
+        function addNewSet(exName) {
+            // Check mode and set data source
+            let source = isLibraryMode ? libraryData : exerciseData[dateKey];
+            if (!source) { source = {}; if(isLibraryMode) libraryData=source; else exerciseData[dateKey]=source; }
+            
+            if(!source[exName]) {
+                 source[exName] = { sets: [{w:'',r:''}], completed: false };
+            }
+            source[exName].sets.push({w:'',r:''});
+            
+            if(!isLibraryMode) saveData();
+            
+            if (isCoreMode && activeAbsLevel) {
+                 renderExercises(absLevels[activeAbsLevel]);
+            } else if (isCoreMode) {
+                 renderExercises(coreExercises);
+            } else {
+                 if(isLibraryMode) {
+                    // Refresh library view (muscle wise)
+                    switchLibraryTab(currentTab);
+                 } else {
+                    renderExercises(workouts[dayName].ex[currentTab]);
+                 }
+            }
+        }
+
+        function renderExercises(list, container = document.getElementById('modalExercises')) {
+            container.innerHTML = "";
+            let source = isLibraryMode ? libraryData : (exerciseData[dateKey] || {});
+
+            list.forEach((exName) => {
+                const name = typeof exName === 'object' ? exName.name : exName;
+                const timeStr = typeof exName === 'object' && exName.time ? exName.time : null;
+                const seconds = typeof exName === 'object' && exName.seconds ? exName.seconds : 0;
+                const repsStr = typeof exName === 'object' && exName.reps ? exName.reps + " REPS" : null;
+                
+                let ex = source[name];
+                if (!ex) { ex = { sets: [{w:'',r:''}], completed: false }; }
+                if (!ex.sets || ex.sets.length === 0) ex.sets = [{w:'',r:''}];
+
+                let videoBtn = '';
+                if(videoLinks[name]) {
+                    videoBtn = `<a href="${videoLinks[name]}" target="_blank" class="ml-2 inline-flex items-center justify-center w-8 h-8 bg-red-900/50 text-red-400 border border-red-500/50 rounded-full hover:bg-red-600 hover:text-white transition-all active:scale-95 shadow-[0_0_10px_rgba(220,38,38,0.4)]"><svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></a>`;
+                }
+
+                let timerBtn = '';
+                if (timeStr) {
+                    timerBtn = `<div onclick="startTimerInterval(${seconds}, '${name}'); hideRestSelector(); document.getElementById('timerContainer').classList.remove('hidden'); event.stopPropagation();" class="cursor-pointer bg-blue-900/40 text-blue-300 px-4 py-2 rounded-lg text-xs font-black tracking-widest flex items-center gap-2 active:scale-95 transition-transform hover:bg-blue-800/60 border border-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.2)]"><span class="text-lg">⏱</span> START ${timeStr}</div>`;
+                }
+
+                let contentHTML = '';
+                if (isCoreMode && activeAbsLevel) {
+                    contentHTML = `
+                    <div class="flex items-center justify-between mt-2 pl-1">
+                        <div class="flex flex-col"><span class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">${repsStr || timeStr || "3 SETS"}</span></div>
+                        ${timerBtn}
+                    </div>`;
+                } else {
+                    ex.sets.forEach((set, i) => {
+                         contentHTML += `
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="text-[10px] font-bold text-slate-500 w-6">SET ${i+1}</span>
+                            <div class="flex items-center flex-1 glass-input rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/50 focus-within:border-blue-500 transition-all">
+                                <input type="number" placeholder="KG" value="${set.w}" oninput="logSet('${name}', ${i}, 'w', this.value)" class="w-1/2 p-2 text-center text-sm font-bold bg-transparent border-r border-white/10 text-white placeholder:text-slate-600">
+                                <input type="number" placeholder="REPS" value="${set.r}" oninput="logSet('${name}', ${i}, 'r', this.value)" class="w-1/2 p-2 text-center text-sm font-bold bg-transparent text-white placeholder:text-slate-600">
+                            </div>
+                        </div>`;
+                    });
+                    
+                    contentHTML += `
+                    <div class="flex justify-center mt-3">
+                         <button onclick="addNewSet('${name}')" class="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 text-blue-400 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all active:scale-90">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                         </button>
+                    </div>`;
+                }
+
+                const isChecked = ex.completed;
+                const circleClass = isChecked 
+                    ? "bg-green-500 border-green-500 scale-110 shadow-[0_0_12px_rgba(34,197,94,0.6)]" 
+                    : "bg-transparent border-slate-600";
+                const checkIcon = isChecked 
+                    ? '<svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>' 
+                    : '';
+
+                // Hide Compare button in Library to keep it clean
+                const historyBtn = !activeAbsLevel && !isLibraryMode ? `<div id="compare-${name.replace(/[\s\/]/g, '')}" class="text-[9px] font-bold text-blue-400 cursor-pointer bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded w-fit active:scale-95 hover:bg-blue-500/30" onclick="showHistory('${name}')">COMPARE</div>` : '';
+
+                const card = document.createElement('div'); 
+                card.className = "glass-card p-5 rounded-2xl relative overflow-hidden transition-all duration-300 layer-boost";
+                if(ex.completed) { card.style.borderColor = "rgba(34, 197, 94, 0.5)"; card.style.background = "rgba(34, 197, 94, 0.08)"; } 
+                card.innerHTML = `
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center gap-2">
+                        <h4 class="font-black text-white text-lg uppercase tracking-tight">${name}</h4>${videoBtn}
+                        ${historyBtn}
+                    </div>
+                    <div class="cursor-pointer transition-transform active:scale-90 w-10 h-10 flex items-center justify-center" onclick="toggleExerciseComplete('${name}')">
+                        <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 check-circle ${circleClass}">
+                            ${checkIcon}
+                        </div>
+                    </div>
+                </div>${contentHTML}`;
+                container.appendChild(card);
+            });
+        }
+
+        function logSet(exName, setIdx, field, val) {
+            let source = isLibraryMode ? libraryData : (exerciseData[dateKey] || {});
+            
+            if(!source[exName]) {
+                 if(isLibraryMode) { libraryData[exName] = { sets: [{w:'',r:''}], completed: false }; source = libraryData; }
+                 else { exerciseData[dateKey] = {}; exerciseData[dateKey][exName] = { sets: [{w:'',r:''}], completed: false }; source = exerciseData[dateKey]; }
+            }
+            
+            while(source[exName].sets.length <= setIdx) {
+                source[exName].sets.push({w:'', r:''});
+            }
+            source[exName].sets[setIdx][field] = val;
+
+            if(!isLibraryMode) {
+                if(val) { 
+                    if(!exerciseData.history) exerciseData.history = {}; 
+                    exerciseData.history[exName] = JSON.parse(JSON.stringify(source[exName].sets)); 
+                }
+                saveData();
+            }
+        }
+
+        function showHistory(exName) {
+            const target = document.getElementById(`compare-${exName.replace(/[\s\/]/g, '')}`);
+            const hist = exerciseData.history ? exerciseData.history[exName] : null;
+            if(hist && Array.isArray(hist)) { const txt = hist.map(s => (s.w && s.r) ? `${s.w}x${s.r}` : '').filter(Boolean).join(' | '); target.innerText = txt || "No Data"; } else { target.innerText = "No Prev Data"; }
+        }
+
+        function toggleExerciseComplete(exName) {
+            let source = isLibraryMode ? libraryData : (exerciseData[dateKey] || {});
+             if(!source[exName]) {
+                 if(isLibraryMode) { libraryData[exName] = { sets: [{w:'',r:''}], completed: false }; source = libraryData; }
+                 else { if(!exerciseData[dateKey]) exerciseData[dateKey]={}; exerciseData[dateKey][exName] = { sets: [{w:'',r:''}], completed: false }; source = exerciseData[dateKey]; }
+            }
+            
+            if (timerTargetExercise === exName && isCoreMode) {
+                 source[exName].completed = true;
+            } else {
+                 source[exName].completed = !source[exName].completed;
+            }
+
+            if(source[exName].completed) { 
+                if(navigator.vibrate) navigator.vibrate(50); 
+                confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 }, colors: ['#22c55e', '#ffffff'] }); 
+            }
+            
+            if(!isLibraryMode) saveData();
+            
+            // Re-render
+            if(isLibraryMode) {
+                switchLibraryTab(currentTab);
+            }
+            else if(isCoreMode) {
+                if (activeAbsLevel) { renderExercises(absLevels[activeAbsLevel]); updateCoreProgress(); } 
+                else if (currentTab === 'level_select') { /* Do nothing */ } 
+                else { renderExercises(coreExercises); updateCoreProgress(); }
+            } else { renderExercises(workouts[dayName].ex[currentTab]); calcTotalProgress(); }
+        }
+
+        function calcTotalProgress() {
+            if(!exerciseData[dateKey]) { updateCircle(0); return; }
+            let total = 0, done = 0;
+            const w = workouts[dayName]; if(!w.ex[0]) return;
+            const allEx = [...w.ex[0], ...w.ex[1]];
+            allEx.forEach(ex => { total++; if(exerciseData[dateKey][ex] && exerciseData[dateKey][ex].completed) done++; });
+            const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+            updateCircle(pct);
+            if(done === total && total > 0 && !streakLocked) { streak++; streakLocked = true; saveData(); }
+            document.getElementById('streakCount').innerText = streak;
+        }
+
+        function updateCircle(pct) { document.getElementById('circleRing').style.strokeDashoffset = 175 - (175 * pct / 100); document.getElementById('gymPercent').innerText = pct + "%"; }
+
+        function openWeightModal() { 
+            document.getElementById('weightModal').classList.remove('hidden'); document.getElementById('weightModal').classList.add('flex'); setTimeout(() => { refreshWeightUI(); }, 50);
+        }
+
+        function logNewWeight() {
+            const wInput = document.getElementById('newWeightInput');
+            const dInput = document.getElementById('weightDateInput');
+            const val = parseFloat(wInput.value); 
+            if(!val || val <= 0) { alert("Please enter a valid weight"); return; }
+            let dateTs = Date.now();
+            if(dInput.value) { const d = new Date(dInput.value); d.setHours(12,0,0,0); dateTs = d.getTime(); }
+            weightHistory.push({date: dateTs, weight: val});
+            saveData(); refreshWeightUI(); wInput.value = ""; document.getElementById('addWeightSection').classList.add('hidden');
+        }
+        
+        function refreshWeightUI() {
+            if(!weightHistory || weightHistory.length === 0) {
+                document.getElementById('historyList').innerHTML = "<div class='text-center text-gray-600 mt-10 text-xs font-bold tracking-widest'>NO HISTORY YET</div>";
+                return;
+            }
+            const sortedByDate = [...weightHistory].sort((a,b) => a.date - b.date);
+            const latest = sortedByDate[sortedByDate.length-1].weight;
+            
+            document.getElementById('displayWeight').innerText = latest;
+            document.getElementById('modalCurrentWeight').innerText = latest + " KG";
+
+            renderHistoryList();
+        }
+
+        function renderHistoryList() {
+            const list = document.getElementById('historyList'); list.innerHTML = "";
+            const sorted = [...weightHistory].sort((a,b) => b.date - a.date);
+            sorted.forEach((item) => {
+                const idx = weightHistory.indexOf(item);
+                const d = new Date(item.date).toLocaleDateString('en-US', {month:'short', day:'numeric'});
+                list.innerHTML += `<div class="history-item relative pl-8 pb-4"><div class="history-line"></div><div class="absolute left-2 top-[18px] w-2.5 h-2.5 rounded-full bg-blue-400 ring-4 ring-white/10 z-10"></div><div class="glass-card p-3 rounded-2xl flex justify-between items-center transition-colors hover:bg-white/10"><span class="text-xs font-bold text-slate-500 tracking-wide">${d}</span><div class="flex items-center gap-3"><span class="text-lg font-black text-white">${item.weight} <span class="text-xs text-slate-500">KG</span></span><button onclick="requestDelete(${idx})" class="w-8 h-8 flex items-center justify-center text-red-400 bg-red-500/10 rounded-full hover:bg-red-500 hover:text-white transition-all active:scale-90">✕</button></div></div></div>`;
+            });
+        }
+
+        function openGymModal() {
+            isCoreMode = false;
+            isLibraryMode = false;
+            document.getElementById('btnHistory').style.display = 'flex'; // Show History Button
+            document.getElementById('modalDay').innerText = dayName;
+            document.getElementById('modalTabs').classList.add('hidden'); // Hide tabs initially
+            document.getElementById('modalExercises').innerHTML = ""; // Clear
+            document.getElementById('workoutModal').classList.remove('hidden'); document.getElementById('workoutModal').classList.add('flex');
+
+            const w = workouts[dayName];
+            if(!w.tabs.length) {
+                document.getElementById('modalExercises').innerHTML = "<div class='text-white text-center font-bold mt-10'>REST DAY</div>";
+                return;
+            }
+
+            // Immediately load workout tabs
+            startMainWorkout();
+        }
+
+        function startMainWorkout() {
+            document.getElementById('modalDay').innerText = dayName;
+            document.getElementById('modalTabs').classList.remove('hidden');
+            document.getElementById('modalTabs').className = "flex p-1 bg-white/5 border border-white/10 rounded-xl mb-6 relative select-none layer-boost";
+            
+            const w = workouts[dayName];
+            document.getElementById('modalTabs').innerHTML = w.tabs.map((t, i) => {
+                const displayName = t.replace(' Var', '');
+                const activeClass = "glass-active-tab shadow-lg scale-[1.02] ring-1 ring-white/20";
+                const inactiveClass = "text-slate-500 hover:text-slate-300 hover:bg-white/5";
+                return `<button onclick="switchTab(${i})" class="flex-1 py-3 rounded-lg text-sm font-black uppercase tracking-widest transition-all duration-300 ease-out ${currentTab === i ? activeClass : inactiveClass}">${displayName}</button>`;
+            }).join('');
+            
+            renderExercises(w.ex[currentTab]);
+        }
+        
+        function openLibraryModal() {
+            isCoreMode = false;
+            isLibraryMode = true;
+            libraryData = {}; // Reset temp data
+            
+            document.getElementById('btnHistory').style.display = 'none'; // No history log in library
+            document.getElementById('workoutModal').classList.remove('hidden'); document.getElementById('workoutModal').classList.add('flex');
+            document.getElementById('modalDay').innerText = "LIBRARY";
+            
+            // Create Tabs for DAYS
+            const daysShort = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+            document.getElementById('modalTabs').classList.remove('hidden');
+            document.getElementById('modalTabs').className = "flex p-1 bg-white/5 border border-white/10 rounded-xl mb-6 relative select-none layer-boost";
+            
+            document.getElementById('modalTabs').innerHTML = daysShort.map((d, i) => {
+                 const activeClass = "glass-active-tab shadow-lg scale-[1.02] ring-1 ring-white/20";
+                 const inactiveClass = "text-slate-500 hover:text-slate-300 hover:bg-white/5";
+                 return `<button onclick="switchLibraryTab(${i})" class="flex-1 py-3 rounded-lg text-sm font-black uppercase tracking-widest transition-all duration-300 ease-out ${i === 0 ? activeClass : inactiveClass}">${d}</button>`;
+            }).join('');
+            
+            // Load Monday by default
+            switchLibraryTab(0);
+        }
+        
+        function switchLibraryTab(idx) {
+             currentTab = idx; 
+             const dayNames = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+             const dName = dayNames[idx];
+             
+             // Update tabs styling
+             const btns = document.getElementById('modalTabs').children; 
+             const activeClass = "flex-1 py-3 rounded-lg text-sm font-black uppercase tracking-widest transition-all duration-300 ease-out glass-active-tab shadow-lg scale-[1.02] ring-1 ring-white/20";
+             const inactiveClass = "flex-1 py-3 rounded-lg text-sm font-black uppercase tracking-widest transition-all duration-300 ease-out text-slate-500 hover:text-slate-300 hover:bg-white/5";
+             for(let b of btns) b.className = inactiveClass; btns[idx].className = activeClass; 
+             
+             // Render Muscle-Separated List
+             const container = document.getElementById('modalExercises');
+             container.innerHTML = "";
+             
+             const w = workouts[dName];
+             if(w && w.tabs) {
+                 w.tabs.forEach((muscleName, i) => {
+                     // Create Header
+                     const header = document.createElement('div');
+                     header.className = "text-xs font-black text-slate-500 tracking-[0.2em] mb-3 mt-6 pl-1";
+                     header.innerText = muscleName.replace(' Var', '');
+                     container.appendChild(header);
+                     
+                     // Create Sub-Container
+                     const subContainer = document.createElement('div');
+                     subContainer.className = "flex flex-col gap-4";
+                     container.appendChild(subContainer);
+                     
+                     // Render Exercises into Sub-Container
+                     renderExercises(w.ex[i], subContainer);
+                 });
+             }
+        }
+
+        function requestDelete(idx) { deleteIndex = idx; document.getElementById('deleteModal').classList.remove('hidden'); document.getElementById('deleteModal').classList.add('flex'); }
+        function confirmDelete() { if(deleteIndex > -1) { weightHistory.splice(deleteIndex, 1); saveData(); refreshWeightUI(); } document.getElementById('deleteModal').classList.add('hidden'); document.getElementById('deleteModal').classList.remove('flex'); }
+
+        init();
+    </script>
+</body>
+</html>
