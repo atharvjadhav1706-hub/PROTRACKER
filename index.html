@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fitness Pro - Ultimate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Archivo+Black&display=swap');
+        
+        :root { --bg-dark: #050505; }
+        body { 
+            background-color: var(--bg-dark); 
+            background-image: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000000 95%);
+            color: #f8fafc; overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; 
+            font-family: 'JetBrains Mono', -apple-system, BlinkMacSystemFont, monospace;
+            touch-action: pan-y;
+        }
+        .layer-boost { transform: translateZ(0); will-change: transform; }
+        .display-font { font-family: 'Archivo Black', sans-serif; }
+
+        /* --- CARDS --- */
+        .glass-card {
+            background: #0a0a0a; border-radius: 24px;
+            position: relative; overflow: hidden;
+            transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .glass-card:active { transform: scale(0.98); }
+
+        /* 1. STREAK / FIRE THEME */
+        .card-fire { 
+            background: linear-gradient(135deg, #dc2626 0%, #ea580c 50%, #f59e0b 100%);
+            border: 1px solid #f87171;
+            box-shadow: 0 10px 40px -10px rgba(220, 38, 38, 0.5);
+        }
+        .text-fire-glow { text-shadow: 2px 2px 0px rgba(0,0,0,0.3), 0 0 20px rgba(255, 255, 255, 0.5); }
+
+        /* 2. CORE / PURPLE THEME */
+        .card-purple { background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 60%, #581c87 100%); border: 1px solid #7c3aed; }
+        .card-pink { background: linear-gradient(135deg, #831843 0%, #be185d 60%, #db2777 100%); border: 1px solid #f472b6; }
+
+        /* 3. GYM / GREEN THEME */
+        .card-green { background: linear-gradient(135deg, #064e3b 0%, #059669 60%, #10b981 100%); border: 1px solid #34d399; }
+
+        /* 4. AI / BLUE THEME */
+        .card-ai { background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 60%, #4f46e5 100%); border: 1px solid #818cf8; box-shadow: 0 0 20px rgba(79, 70, 229, 0.3); }
+
+        .card-gold { background: linear-gradient(135deg, #422006 0%, #a16207 60%, #ca8a04 100%); border: 1px solid #facc15; }
+        .card-ocean { background: linear-gradient(135deg, #082f49 0%, #0284c7 60%, #0ea5e9 100%); border: 1px solid #7dd3fc; }
+
+        /* UI Elements */
+        .modal-bg { background-color: #000000; }
+        .grad-pill { background: linear-gradient(135deg, #3b82f6, #2563eb); border: 1px solid rgba(255,255,255,0.2); }
+        .action-pill {
+            padding: 5px 12px; border-radius: 999px; font-size: 10px; font-weight: 900; letter-spacing: 0.05em;
+            display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s; text-transform: uppercase; cursor: pointer; backdrop-filter: blur(4px);
+        }
+        .action-pill:active { transform: scale(0.95); }
+        .pill-video { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .pill-timer { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+        
+        .modal-exercise-card { background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.6) 100%); border: 1px solid rgba(255,255,255,0.1); border-left: 3px solid #3b82f6; }
+        .modal-active-tab { background: #3b82f6; color: white; box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); border: 1px solid rgba(255,255,255,0.2); transform: scale(1.02); }
+        .glass-input-styled { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; transition: all 0.3s ease; font-family: 'JetBrains Mono', monospace; }
+        .glass-input-styled:focus { border-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); background: rgba(0,0,0,0.6); outline: none; }
+
+        .neon-checkbox { width: 32px; height: 32px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+        .neon-checkbox.checked { background: #3b82f6; border-color: #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); transform: scale(1.1); }
+        .emoji-watermark { position: absolute; right: 0; bottom: -5px; font-size: 6rem; line-height: 1; opacity: 0.15; pointer-events: none; z-index: 0; filter: grayscale(0.2) drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+        
+        .ai-thinking { display: inline-flex; gap: 4px; }
+        .ai-dot { width: 8px; height: 8px; border-radius: 50%; background: #a78bfa; animation: aiDotBounce 1.4s infinite ease-in-out both; }
+        .ai-dot:nth-child(1) { animation-delay: -0.32s; }
+        .ai-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes aiDotBounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        
+        .ai-insight-card {
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(0,0,0,0.4) 100%);
+            border: 1px solid rgba(124, 58, 237, 0.4);
+            border-left: 4px solid #7c3aed;
+            padding: 16px; border-radius: 16px; margin: 12px 0; backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        
+        .ai-badge {
+            background: linear-gradient(135deg, #7c3aed, #a78bfa);
+            color: white; padding: 4px 12px; border-radius: 999px;
+            font-size: 10px; font-weight: 900; letter-spacing: 0.1em;
+            display: inline-block; box-shadow: 0 0 15px rgba(124, 58, 237, 0.4);
+        }
+        
+        /* Prevent body scroll when modal is open */
+        body.modal-open { overflow: hidden !important; }
+
+        input:focus { outline: none; }
+        * { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    </style>
+</head>
+<body class="min-h-screen p-4 pb-36 select-none layer-boost">
+
+    <div class="flex flex-col gap-5 max-w-md mx-auto relative z-10">
+        <div class="flex items-center justify-between pt-2 px-1">
+            <div class="flex flex-col justify-center">
+                <label class="text-[10px] font-bold text-gray-500 tracking-[0.2em] mb-1">WELCOME BACK,</label>
+                <input type="text" id="userNameInput" value="USER" oninput="saveData()" class="bg-transparent text-3xl font-black uppercase w-56 text-white border-none p-0 leading-none truncate focus:text-blue-500 display-font">
+            </div>
+            <button onclick="document.getElementById('settingsModal').classList.remove('hidden'); document.getElementById('settingsModal').classList.add('flex');" class="w-10 h-10 rounded-full bg-[#111] border border-[#222] flex items-center justify-center text-slate-400 active:scale-90 transition-transform hover:text-white">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </button>
+        </div>
+
+        <div class="glass-card card-fire p-5">
+            <div class="emoji-watermark">🔥</div>
+            <div class="z-10 relative flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] font-bold text-white/80 tracking-[0.2em] uppercase mb-1">CURRENT STREAK</p>
+                    <div class="flex items-center gap-3">
+                        <span id="streakCount" class="text-6xl font-black italic text-white tracking-tighter text-fire-glow display-font">0</span>
+                        <span class="text-4xl filter drop-shadow-md">🏆</span>
+                    </div>
+                </div>
+                <div class="text-[11px] font-black text-white/90 text-right leading-tight tracking-wide border-r-2 border-white/50 pr-3">CONSISTENCY<br>IS THE<br>KEY</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div onclick="openCoreModal('general')" class="glass-card card-purple flex flex-col justify-between h-36 cursor-pointer p-5 pl-6 active:scale-95 transition-transform">
+                <div class="emoji-watermark">⚡</div>
+                <div class="z-10 relative">
+                    <span class="text-[10px] font-bold tracking-[0.2em] uppercase text-purple-200/70 block mb-1">DAILY</span>
+                    <span class="text-2xl font-black text-white display-font">CORE</span>
+                </div>
+                <div class="z-10 relative w-full bg-black/30 h-1.5 rounded-full overflow-hidden"><div id="coreProgressBar" class="bg-purple-400 h-full w-0 transition-all duration-500 shadow-[0_0_10px_#a78bfa]"></div></div>
+                <div class="z-10 relative flex items-center gap-1 text-[9px] font-bold text-purple-200/60">ROUTINE</div>
+            </div>
+            <div onclick="openCoreModal('abs')" class="glass-card card-pink flex flex-col justify-between h-36 cursor-pointer p-5 pl-6 active:scale-95 transition-transform">
+                <div class="emoji-watermark">🎯</div>
+                <div class="z-10 relative">
+                    <span class="text-[10px] font-bold tracking-[0.2em] uppercase text-pink-200/70 block mb-1">TRAINING</span>
+                    <span class="text-2xl font-black text-white display-font">ABS</span>
+                </div>
+                <div class="z-10 relative w-full bg-black/30 h-1.5 rounded-full overflow-hidden"><div id="absProgressBar" class="bg-pink-400 h-full w-0 transition-all duration-500 shadow-[0_0_10px_#f472b6]"></div></div>
+                <div class="z-10 relative flex items-center gap-1 text-[9px] font-bold text-pink-200/60">LEVELS</div>
+            </div>
+        </div>
+
+        <div onclick="openGymModal()" class="glass-card card-green cursor-pointer p-6 active:scale-98 transition-transform">
+            <div class="emoji-watermark">🏋🏻</div>
+            <div class="z-10 relative flex justify-between items-center">
+                <div class="flex-1 pr-4">
+                    <h2 class="text-2xl font-black italic tracking-tighter uppercase text-white mb-2 display-font">Today's Workout</h2>
+                    <div id="todayPreview" class="text-[10px] font-bold text-emerald-200 uppercase tracking-[0.2em]"></div>
+                </div>
+                <div class="relative w-16 h-16 shrink-0">
+                    <svg class="w-full h-full -rotate-90">
+                        <circle cx="32" cy="32" r="28" stroke="rgba(255,255,255,0.1)" stroke-width="6" fill="transparent" />
+                        <circle id="circleRing" cx="32" cy="32" r="28" stroke="#10b981" stroke-width="6" fill="transparent" class="transition-all duration-700 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]" stroke-dasharray="175" stroke-dashoffset="175" stroke-linecap="round"/>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center"><span id="gymPercent" class="text-[10px] font-bold text-white">0%</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div onclick="openAIHub()" class="glass-card card-ai cursor-pointer p-6 active:scale-98 transition-transform">
+            <div class="emoji-watermark">🤖</div>
+            <div class="z-10 relative flex justify-between items-center">
+                <div class="flex-1 pr-4">
+                    <div class="ai-badge mb-3">AI POWERED</div>
+                    <h2 class="text-2xl font-black italic tracking-tighter uppercase text-white mb-2 display-font">AI Coach</h2>
+                    <div class="text-[10px] font-bold text-indigo-200 uppercase tracking-[0.2em]">Smart Assistant</div>
+                </div>
+                <div class="text-5xl filter drop-shadow-[0_0_10px_rgba(129,140,248,0.8)]">✨</div>
+            </div>
+        </div>
+
+        <div onclick="openWeightModal()" class="glass-card card-ocean w-full p-6 cursor-pointer active:scale-98 transition-transform">
+            <div class="emoji-watermark">📉</div>
+            <div class="z-10 relative flex justify-between items-center">
+                <div>
+                    <span class="text-[10px] font-bold tracking-[0.2em] uppercase text-blue-200/70">BODY WEIGHT</span>
+                    <div class="flex items-baseline mt-1"><span id="displayWeight" class="text-3xl font-black text-white tracking-tighter display-font drop-shadow-md">--</span><span class="text-xs font-bold text-blue-200/60 ml-1">KG</span></div>
+                </div>
+                <div class="w-10 h-10 bg-black/20 border border-white/10 rounded-full flex items-center justify-center text-white/50"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg></div>
+            </div>
+        </div>
+
+        <div onclick="openLibraryModal()" class="glass-card card-gold w-full p-4 cursor-pointer active:scale-98 transition-transform flex items-center justify-center gap-2">
+             <span class="text-[10px] font-bold tracking-[0.2em] uppercase text-yellow-200/70">VIEW EXERCISE LIBRARY</span>
+        </div>
+    </div>
+
+
+    <div id="aiHubModal" class="fixed inset-0 z-[100] hidden flex-col modal-bg">
+        <div class="p-6 flex-shrink-0 flex justify-between items-center border-b border-[#222] bg-black">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.5)]"><span class="text-xl">🤖</span></div>
+                <h2 class="text-lg font-black uppercase text-white tracking-tight display-font">AI COACH HUB</h2>
+            </div>
+            <button onclick="closeAIHub()" class="w-10 h-10 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center font-bold hover:bg-[#222]">✕</button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-grow pb-32 relative">
+            <div class="grid grid-cols-1 gap-4">
+                <div onclick="openAIWorkoutGenerator()" class="glass-card card-ai p-6 rounded-3xl cursor-pointer active:scale-95 transition-transform relative overflow-hidden">
+                    <div class="emoji-watermark">💪</div>
+                    <div class="z-10 relative"><div class="ai-badge mb-3">GENERATE</div><h3 class="text-2xl font-black text-white mb-2 display-font">Workout Generator</h3><p class="text-sm text-indigo-200/70">Create muscle-specific workout plans</p></div>
+                </div>
+                <div onclick="openAIFormCoach()" class="glass-card card-green p-6 rounded-3xl cursor-pointer active:scale-95 transition-transform relative overflow-hidden">
+                    <div class="emoji-watermark">👁️</div>
+                    <div class="z-10 relative"><div class="ai-badge mb-3">ANALYZE</div><h3 class="text-2xl font-black text-white mb-2 display-font">Form Coach</h3><p class="text-sm text-green-200/70">Get tips on proper exercise form and technique</p></div>
+                </div>
+                <div onclick="openAIProgressAnalyzer()" class="glass-card card-ocean p-6 rounded-3xl cursor-pointer active:scale-95 transition-transform relative overflow-hidden">
+                    <div class="emoji-watermark">📊</div>
+                    <div class="z-10 relative"><div class="ai-badge mb-3">INSIGHTS</div><h3 class="text-2xl font-black text-white mb-2 display-font">Progress Analyzer</h3><p class="text-sm text-blue-200/70">Deep analysis of your fitness journey and patterns</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="aiFeatureModal" class="fixed inset-0 z-[110] hidden flex-col modal-bg">
+        <div class="p-6 flex-shrink-0 flex justify-between items-center border-b border-[#222] bg-black">
+            <div class="flex items-center gap-3">
+                <button onclick="backToAIHub()" class="w-10 h-10 rounded-full bg-[#111] border border-[#222] text-white flex items-center justify-center active:bg-[#1a1a1a] hover:bg-[#222]">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <h2 id="aiFeatureTitle" class="text-lg font-black uppercase text-white tracking-tight display-font">AI FEATURE</h2>
+            </div>
+            <button onclick="closeAIFeature()" class="w-10 h-10 rounded-full bg-red-900/20 text-red-500 border border-red-900/50 flex items-center justify-center font-bold hover:bg-red-900/40 text-xs tracking-widest">EXIT</button>
+        </div>
+        <div id="aiFeatureContent" class="p-6 overflow-y-auto flex-grow pb-32 relative"></div>
+    </div>
+
+    <div id="settingsModal" class="fixed inset-0 z-[110] bg-black/90 hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="glass-card card-purple w-full max-w-sm p-6 border border-[#333]">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-black text-white uppercase tracking-tight display-font">Data Management</h3>
+                <button onclick="document.getElementById('settingsModal').classList.add('hidden'); document.getElementById('settingsModal').classList.remove('flex');" class="w-8 h-8 rounded-full bg-[#222] text-white flex items-center justify-center">✕</button>
+            </div>
+            <div class="flex flex-col gap-3">
+                <button onclick="backupData()" class="w-full py-4 bg-blue-600 rounded-xl font-bold text-white uppercase tracking-widest text-sm shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Backup Data
+                </button>
+                <div class="relative">
+                    <input type="file" id="restoreFile" onchange="restoreData(this)" class="hidden" accept=".json">
+                    <button onclick="document.getElementById('restoreFile').click()" class="w-full py-4 bg-[#222] border border-[#333] rounded-xl font-bold text-slate-300 uppercase tracking-widest text-sm shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        Restore Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="fullscreenTimer" class="fixed inset-0 z-[200] hidden flex-col items-center justify-center bg-black/95 backdrop-blur-xl transition-all duration-300 touch-none overscroll-none">
+        
+        <button onclick="resetTimer()" class="absolute top-6 right-6 w-12 h-12 bg-white/10 rounded-full border border-white/10 flex items-center justify-center active:scale-90 transition-transform z-50 hover:bg-white/20">
+            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+
+        <div class="flex-grow flex flex-col items-center justify-center w-full relative">
+            <h2 id="timerTitle" class="text-4xl font-black text-white tracking-[0.2em] uppercase drop-shadow-2xl opacity-90 text-center display-font mb-10">RESTING</h2>
+            
+            <div id="timerContainer" class="relative w-80 h-80 flex items-center justify-center hidden">
+                <svg class="w-full h-full absolute inset-0 drop-shadow-[0_0_30px_rgba(59,130,246,0.6)]" viewBox="0 0 320 320">
+                    <defs><linearGradient id="movingGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs>
+                    <circle cx="160" cy="160" r="140" stroke="rgba(255,255,255,0.1)" stroke-width="8" fill="transparent"/>
+                    <circle id="timerProgressRing" cx="160" cy="160" r="140" stroke="url(#movingGradient)" stroke-width="8" fill="transparent" stroke-dasharray="879.6" stroke-dashoffset="0" stroke-linecap="round" style="transform-origin: center; transform: rotate(-90deg); transition: stroke-dashoffset 0.1s linear;" />
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center z-20"><span id="overlayTimerDisplay" class="text-7xl font-black text-white tracking-tighter font-mono">00:00</span></div>
+            </div>
+
+            <div id="restSelector" class="hidden w-full max-w-sm grid grid-cols-2 gap-4 px-6">
+                 <button onclick="startTimerInterval(30, 'RESTING'); hideRestSelector()" class="glass-card bg-white/5 border border-white/10 text-white font-black text-3xl py-8 rounded-3xl active:scale-95 transition-all shadow-lg hover:bg-white/10 display-font">30s</button>
+                 <button onclick="startTimerInterval(60, 'RESTING'); hideRestSelector()" class="glass-card bg-white/5 border border-white/10 text-white font-black text-3xl py-8 rounded-3xl active:scale-95 transition-all shadow-lg hover:bg-white/10 display-font">1m</button>
+                 <button onclick="startTimerInterval(90, 'RESTING'); hideRestSelector()" class="glass-card bg-white/5 border border-white/10 text-white font-black text-3xl py-8 rounded-3xl active:scale-95 transition-all shadow-lg hover:bg-white/10 display-font">1.5m</button>
+                 <button onclick="startTimerInterval(120, 'RESTING'); hideRestSelector()" class="glass-card bg-white/5 border border-white/10 text-white font-black text-3xl py-8 rounded-3xl active:scale-95 transition-all shadow-lg hover:bg-white/10 display-font">2m</button>
+            </div>
+        </div>
+
+        <div class="w-full p-6 pb-12 flex justify-center z-50">
+             <button id="timerStopButton" onclick="resetTimer()" class="hidden w-full max-w-xs py-4 rounded-full bg-red-600 border border-red-400 text-white font-black tracking-widest uppercase shadow-[0_0_20px_rgba(220,38,38,0.5)] active:scale-95 transition-transform">STOP TIMER</button>
+             <button id="cancelTimerSelect" onclick="resetTimer()" class="hidden text-gray-500 font-bold text-xs tracking-[0.2em] py-4">CANCEL</button>
+        </div>
+    </div>
+
+    <div id="workoutModal" class="fixed inset-0 z-50 hidden flex flex-col modal-bg">
+        <div class="p-4 flex-shrink-0 flex justify-between items-center border-b border-[#222] bg-black z-50">
+            <button id="btnBackToMenu" onclick="openLibraryModal()" class="hidden w-10 h-10 rounded-full bg-[#111] border border-[#222] text-gray-300 flex items-center justify-center mr-2">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <div class="mr-auto"><div class="grad-pill px-5 py-2 rounded-full"><span id="modalDay" class="text-sm font-black uppercase tracking-widest text-white">DAY</span></div></div>
+            <div class="flex items-center gap-2">
+                <button id="btnHistory" onclick="openHistoryModal()" class="w-10 h-10 rounded-full bg-[#111] border border-[#222] flex items-center justify-center">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </button>
+                <button onclick="showRestSelector()" class="h-10 pl-3 pr-4 rounded-full bg-[#111] border border-[#222] text-slate-300 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span class="text-[10px] font-black tracking-widest">REST</span>
+                </button>
+                <button onclick="closeModal()" class="w-10 h-10 rounded-full bg-[#111] border border-[#222] text-slate-300 flex items-center justify-center font-bold">✕</button>
+            </div>
+        </div>
+        <div class="p-4 overflow-y-auto flex-grow pb-20 relative">
+             <div id="modalTabs" class="flex gap-2 mb-6 relative z-10 hidden"></div>
+             <div id="modalExercises" class="flex flex-col gap-4 relative z-10"></div>
+        </div>
+    </div>
+
+    <div id="historyModal" class="fixed inset-0 z-[60] hidden flex-col modal-bg">
+        <div class="p-6 flex-shrink-0 flex justify-between items-center border-b border-[#222] bg-black">
+            <h2 class="text-lg font-black uppercase text-white display-font">History Log</h2>
+            <button onclick="document.getElementById('historyModal').classList.add('hidden')" class="w-10 h-10 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center">✕</button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-grow pb-32"><div id="historyLogContainer"></div></div>
+    </div>
+
+    <div id="weightModal" class="fixed inset-0 z-50 hidden flex-col modal-bg">
+        <div class="p-6 flex-shrink-0 flex justify-between items-center border-b border-[#222] bg-black">
+            <h2 class="text-lg font-black uppercase text-white display-font">Body Weight</h2>
+            <button onclick="document.getElementById('weightModal').classList.add('hidden')" class="w-10 h-10 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center">✕</button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-grow pb-20">
+            <div class="grid grid-cols-3 gap-3 mb-6">
+                <div class="glass-card p-3 rounded-xl text-center"><span class="text-[9px] font-bold text-gray-500 uppercase">Current</span><span id="statCurrent" class="text-lg font-black text-white mt-1 block display-font">--</span></div>
+                <div class="glass-card p-3 rounded-xl text-center"><span class="text-[9px] font-bold text-gray-500 uppercase">Start</span><span id="statStart" class="text-lg font-black text-white mt-1 block display-font">--</span></div>
+                <div class="glass-card p-3 rounded-xl text-center"><span class="text-[9px] font-bold text-gray-500 uppercase">Change</span><span id="statChange" class="text-lg font-black text-green-500 mt-1 block display-font">--</span></div>
+            </div>
+            <div class="glass-card rounded-2xl p-5 mb-8">
+                <div class="flex justify-between items-start mb-6">
+                    <div><h3 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-1">CURRENT WEIGHT</h3><span id="modalCurrentWeight" class="text-3xl font-black text-white display-font">--</span></div>
+                    <button onclick="document.getElementById('addWeightSection').classList.toggle('hidden')" class="w-10 h-10 bg-blue-600 rounded-lg text-white flex items-center justify-center shadow-lg active:scale-95">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </button>
+                </div>
+                <div id="addWeightSection" class="hidden mb-6 bg-[#111] p-4 rounded-xl border border-[#222]">
+                    <div class="flex gap-3">
+                        <input type="date" id="weightDateInput" class="flex-1 glass-input-styled rounded-lg p-3 font-bold text-sm">
+                        <input type="number" id="newWeightInput" placeholder="KG" class="w-24 glass-input-styled rounded-lg p-3 font-black text-center">
+                    </div>
+                    <button onclick="logNewWeight()" class="w-full mt-3 bg-blue-600 text-white py-3 rounded-lg font-bold uppercase text-xs tracking-widest">Update Log</button>
+                </div>
+            </div>
+            <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">HISTORY</h3>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <div id="deleteModal" class="fixed inset-0 z-[80] bg-black/80 hidden items-center justify-center">
+        <div class="glass-card card-fire p-6 rounded-2xl max-w-xs w-full text-center border border-[#333]">
+            <h3 class="text-lg font-black text-white mb-4 display-font">Delete Entry?</h3>
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('deleteModal').classList.add('hidden')" class="flex-1 py-3 bg-[#222] text-white rounded-xl font-bold">Cancel</button>
+                <button onclick="confirmDelete()" class="flex-1 py-3 bg-red-600 rounded-xl font-bold text-white">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === CONSTANTS & STATE ===
+        const today = new Date();
+        const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+        const dayName = days[today.getDay()];
+        const dateKey = today.toISOString().split('T')[0];
+
+        const workouts = {
+            'MONDAY': { tabs: ['Chest', 'Triceps'], ex: [['Barbell Bench Press', 'Incline Dumbbell Press', 'Pec Deck Fly', 'Chest Press Machine'], ['Skullcrushers (EZ Bar)', 'Cable Pushdown (Rope)', 'Overhead DB Extension']] },
+            'TUESDAY': { tabs: ['Back Width', 'Biceps'], ex: [['Lat Pulldown (Wide Grip)', 'Seated Cable Row', 'Single Arm Dumbbell Row', 'Straight Arm Pulldown'], ['Barbell Curl', 'Hammer Curls (Dumbbell)', 'Preacher Curl Machine']] },
+            'WEDNESDAY': { tabs: ['Legs (Quad)', 'Calves'], ex: [['Barbell Squat', 'Leg Press', 'Walking Lunges', 'Leg Extensions'], ['Standing Calf Raise', 'Seated Calf Raise']] },
+            'THURSDAY': { tabs: ['Shoulders', 'Upper Chest'], ex: [['Overhead Press (Dumbbell)', 'Lateral Raises', 'Face Pulls', 'Front Raises'], ['Incline Smith Machine Press', 'Incline Cable Fly', 'Tricep Dips (Machine)']] },
+            'FRIDAY': { tabs: ['Back Thicc', 'Biceps Vol'], ex: [['T-Bar Row (Chest Supported)', 'Lat Pulldown (Close Grip)', 'Rack Pulls', 'Shrugs'], ['Incline Dumbbell Curl', 'Cable Curl', 'Reverse Curl (EZ Bar)']] },
+            'SATURDAY': { tabs: ['Post. Chain', 'Glutes'], ex: [['Romanian Deadlift (RDL)', 'Bulgarian Split Squat', 'Lying Leg Curls'], ['Glute Bridge (Barbell)', 'Hyperextensions']] },
+            'SUNDAY': { tabs: [], ex: [] }
+        };
+
+        const muscleWorkouts = {
+            'CHEST': [{ name: 'Barbell Bench Press', sets: 3, reps: '8-12' }, { name: 'Incline Dumbbell Press', sets: 3, reps: '8-12' }, { name: 'Pec Deck Fly', sets: 3, reps: '12-15' }, { name: 'Cable Crossover', sets: 3, reps: '15' }],
+            'BACK': [{ name: 'Deadlift', sets: 3, reps: '5-8' }, { name: 'Lat Pulldown', sets: 3, reps: '10-12' }, { name: 'Seated Row', sets: 3, reps: '10-12' }, { name: 'Pull-ups', sets: 3, reps: 'AMRAP' }],
+            'LEGS': [{ name: 'Barbell Squat', sets: 3, reps: '6-10' }, { name: 'Leg Press', sets: 3, reps: '10-15' }, { name: 'RDL', sets: 3, reps: '8-12' }, { name: 'Leg Extensions', sets: 3, reps: '15' }],
+            'SHOULDERS': [{ name: 'Overhead Press', sets: 3, reps: '6-10' }, { name: 'Lateral Raises', sets: 3, reps: '12-15' }, { name: 'Face Pulls', sets: 3, reps: '15-20' }, { name: 'Front Raises', sets: 3, reps: '12' }],
+            'ARMS': [{ name: 'Barbell Curl', sets: 3, reps: '8-12' }, { name: 'Tricep Pushdown', sets: 3, reps: '12-15' }, { name: 'Hammer Curls', sets: 3, reps: '10-12' }, { name: 'Skullcrushers', sets: 3, reps: '10-12' }],
+            'CARDIO': [{ name: 'Treadmill Run', time: '20m', seconds: 1200 }, { name: 'Cycling', time: '15m', seconds: 900 }, { name: 'Jump Rope', time: '10m', seconds: 600 }]
+        };
+
+        const coreExercises = {
+            'Core': [{ name: 'Hanging Leg Raises', sets: 3, reps: '10-12' }, { name: 'Ab Wheel Rollout', sets: 3, reps: '8-12' }, { name: 'Plank (Weighted)', time: '60s', sets: 3, seconds: 60 }],
+            'Calisthenics': [{ name: 'Pull-ups', sets: 3, reps: 'AMRAP' }, { name: 'Push-ups (Wide)', sets: 3, reps: '15-20' }],
+            'Mobility': [{ name: 'Cat-Cow Stretch', time: '60s', sets: 2, seconds: 60 }, { name: 'Deep Squat Hold', time: '45s', sets: 2, seconds: 45 }]
+        };
+
+        const absLevels = {
+            'beginner': [{ name: 'Dead Bug', reps: '12' }, { name: 'Plank', time: '00:30', seconds: 30 }],
+            'intermediate': [{ name: 'Lying Leg Raises', reps: '15' }, { name: 'Mountain Climbers', time: '00:45', seconds: 45 }],
+            'advanced': [{ name: 'Hanging Leg Raises', reps: '15' }, { name: 'Dragon Flags', reps: '8' }]
+        };
+
+        let exerciseData = {}, weightHistory = [], streak = 0, streakLocked = false, userName = "USER";
+        let isCoreMode = false, isLibraryMode = false, activeMuscleGroup = null, activeAbsLevel = null, activeCoreTab = 'Core', currentTab = 0;
+        let timerInterval = null, timerEndTime = null, timerTotalDuration = 0, timerTargetExercise = null, deleteIndex = -1;
+
+        // === AI LOGIC ===
+
+        function openAIHub() { document.getElementById('aiHubModal').classList.remove('hidden'); document.getElementById('aiHubModal').classList.add('flex'); }
+        function closeAIHub() { document.getElementById('aiHubModal').classList.add('hidden'); }
+        function backToAIHub() { document.getElementById('aiFeatureModal').classList.add('hidden'); openAIHub(); }
+        function closeAIFeature() { document.getElementById('aiFeatureModal').classList.add('hidden'); }
+
+        function openAIWorkoutGenerator() {
+            document.getElementById('aiFeatureTitle').innerText = "WORKOUT GENERATOR";
+            document.getElementById('aiFeatureContent').innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <div class="ai-insight-card mb-6"><h3 class="text-lg font-black text-white mb-2 display-font">🎯 MUSCLE TARGET</h3><p class="text-sm text-indigo-200/70">Pick a muscle group to generate a focused workout.</p></div>
+                    <div class="glass-card p-5 mb-4">
+                        <label class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">Target Muscle</label>
+                        <select id="aiGoalSelect" class="w-full glass-input-styled rounded-lg p-3 mb-4">
+                            <option value="CHEST">Chest</option>
+                            <option value="BACK">Back</option>
+                            <option value="LEGS">Legs</option>
+                            <option value="SHOULDERS">Shoulders</option>
+                            <option value="ARMS">Arms (Bi/Tri)</option>
+                            <option value="CARDIO">Cardio</option>
+                        </select>
+                        <button onclick="generateLocalWorkout()" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-indigo-800 rounded-xl font-bold text-white uppercase tracking-widest shadow-lg active:scale-95 transition-transform">✨ GENERATE PLAN</button>
+                    </div>
+                    <div id="aiWorkoutResult" class="hidden"></div>
+                </div>
+            `;
+            document.getElementById('aiHubModal').classList.add('hidden');
+            document.getElementById('aiFeatureModal').classList.remove('hidden'); document.getElementById('aiFeatureModal').classList.add('flex');
+        }
+
+        function generateLocalWorkout() {
+            const goal = document.getElementById('aiGoalSelect').value;
+            const resultDiv = document.getElementById('aiWorkoutResult'); resultDiv.classList.remove('hidden');
+            resultDiv.innerHTML = '<div class="flex items-center justify-center gap-2 text-indigo-300 py-8"><span class="text-sm font-bold">BUILDING ROUTINE...</span><div class="ai-thinking"><div class="ai-dot"></div><div class="ai-dot"></div></div></div>';
+            
+            setTimeout(() => {
+                let exercises = muscleWorkouts[goal] || [];
+                const planHTML = exercises.map(ex => `
+                    <div class="mb-2 pb-2 border-b border-white/10 last:border-0">
+                        <div class="font-bold text-white">${ex.name}</div>
+                        <div class="text-xs text-gray-400 font-mono">${ex.sets || 1} Sets × ${ex.reps || 'Duration'}</div>
+                    </div>
+                `).join('');
+                resultDiv.innerHTML = `<div class="ai-insight-card"><div class="ai-badge mb-3">${goal} WORKOUT</div><div class="text-sm text-white leading-relaxed">${planHTML}</div></div>`;
+            }, 600);
+        }
+
+        function openAIFormCoach() {
+            document.getElementById('aiFeatureTitle').innerText = "FORM COACH";
+            const allExercises = [...new Set([...Object.values(muscleWorkouts).flat().map(e => e.name)])].sort();
+            document.getElementById('aiFeatureContent').innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <div class="ai-insight-card mb-6"><h3 class="text-lg font-black text-white mb-2 display-font">👁️ PERFECT FORM</h3><p class="text-sm text-green-200/70">Select an exercise to see key technique cues.</p></div>
+                    <div class="glass-card p-5 mb-4">
+                        <select id="aiExerciseSelect" class="w-full glass-input-styled rounded-lg p-3 mb-4">${allExercises.map(ex => `<option>${ex}</option>`).join('')}</select>
+                        <button onclick="getLocalFormAdvice()" class="w-full py-4 bg-gradient-to-r from-green-600 to-green-800 rounded-xl font-bold text-white uppercase tracking-widest shadow-lg active:scale-95 transition-transform">🎯 GET TIPS</button>
+                    </div>
+                    <div id="aiFormResult" class="hidden"></div>
+                </div>
+            `;
+            document.getElementById('aiHubModal').classList.add('hidden');
+            document.getElementById('aiFeatureModal').classList.remove('hidden'); document.getElementById('aiFeatureModal').classList.add('flex');
+        }
+
+        function getLocalFormAdvice() {
+            const exercise = document.getElementById('aiExerciseSelect').value;
+            const resultDiv = document.getElementById('aiFormResult'); resultDiv.classList.remove('hidden');
+            const tips = { 'Barbell Bench Press': "1. Eyes under bar.<br>2. Retract scapula.<br>3. Lower to mid-chest.", 'Barbell Squat': "1. Feet shoulder-width.<br>2. Brace core.<br>3. Knees over toes.", 'default': "Focus on controlled eccentric (lowering) phase. Keep core braced." };
+            const advice = tips[exercise] || tips['default'];
+            resultDiv.innerHTML = `<div class="ai-insight-card"><div class="ai-badge mb-3">FORM CUES</div><h4 class="text-md font-black text-white mb-3 display-font">${exercise}</h4><div class="text-sm text-white leading-relaxed font-mono">${advice}</div></div>`;
+        }
+
+        function openAIProgressAnalyzer() {
+            document.getElementById('aiFeatureTitle').innerText = "PROGRESS ANALYZER";
+            document.getElementById('aiFeatureContent').innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <div class="ai-insight-card mb-6"><h3 class="text-lg font-black text-white mb-2 display-font">📊 DATA INSIGHTS</h3><p class="text-sm text-blue-200/70">Analyzing your local history.</p></div>
+                    <button onclick="analyzeLocalProgress()" class="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl font-bold text-white uppercase tracking-widest shadow-lg active:scale-95 transition-transform mb-6">🔍 ANALYZE MY STATS</button>
+                    <div id="aiProgressResult"></div>
+                </div>
+            `;
+            document.getElementById('aiHubModal').classList.add('hidden');
+            document.getElementById('aiFeatureModal').classList.remove('hidden'); document.getElementById('aiFeatureModal').classList.add('flex');
+        }
+
+        function analyzeLocalProgress() {
+            const resultDiv = document.getElementById('aiProgressResult');
+            const workoutDays = Object.keys(exerciseData).filter(k => k.match(/^\d{4}-\d{2}-\d{2}$/)).length;
+            const weightChange = weightHistory.length > 1 ? (weightHistory[weightHistory.length - 1].weight - weightHistory[0].weight).toFixed(1) : "0";
+            let feedback = "Keep logging workouts to see more data!";
+            if(workoutDays > 5) feedback = "You are building a solid habit. Consistency is excellent.";
+            resultDiv.innerHTML = `<div class="grid grid-cols-3 gap-3 mb-6"><div class="glass-card p-4 rounded-xl text-center"><div class="text-2xl font-black text-blue-400 display-font">${streak}</div><div class="text-xs text-gray-400 font-bold mt-1">STREAK</div></div><div class="glass-card p-4 rounded-xl text-center"><div class="text-2xl font-black text-blue-400 display-font">${workoutDays}</div><div class="text-xs text-gray-400 font-bold mt-1">SESSIONS</div></div><div class="glass-card p-4 rounded-xl text-center"><div class="text-2xl font-black text-blue-400 display-font">${weightChange}</div><div class="text-xs text-gray-400 font-bold mt-1">KG CHANGE</div></div></div><div class="ai-insight-card"><div class="ai-badge mb-3">SUMMARY</div><div class="text-sm text-white leading-relaxed font-mono">${feedback}</div></div>`;
+        }
+
+        // === TIMER FUNCTIONS (FIXED) ===
+        function showRestSelector() {
+            // Freeze background
+            document.body.classList.add('modal-open');
+            
+            const modal = document.getElementById('fullscreenTimer');
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            
+            document.getElementById('restSelector').classList.remove('hidden'); document.getElementById('restSelector').classList.add('grid');
+            document.getElementById('timerContainer').classList.add('hidden'); 
+            
+            // Show Cancel, Hide Stop
+            document.getElementById('cancelTimerSelect').classList.remove('hidden');
+            document.getElementById('timerStopButton').classList.add('hidden');
+            
+            document.getElementById('timerTitle').innerText = "SELECT REST";
+        }
+
+        function hideRestSelector() {
+            document.getElementById('restSelector').classList.add('hidden'); document.getElementById('restSelector').classList.remove('grid');
+            document.getElementById('timerContainer').classList.remove('hidden'); 
+            
+            // Show Stop, Hide Cancel
+            document.getElementById('timerStopButton').classList.remove('hidden');
+            document.getElementById('cancelTimerSelect').classList.add('hidden');
+        }
+
+        function startTimerInterval(customSeconds, labelText = "") {
+            // Reset state without closing modal
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = null;
+            
+            timerTotalDuration = customSeconds; 
+            timerEndTime = Date.now() + (customSeconds * 1000); 
+            timerTargetExercise = labelText; 
+            saveData();
+            
+            // Ensure modal is visible & locked
+            document.body.classList.add('modal-open');
+            const modal = document.getElementById('fullscreenTimer');
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            
+            // Ensure correct view (Active Timer)
+            hideRestSelector();
+            
+            document.getElementById("timerTitle").innerText = labelText ? labelText.toUpperCase() : "RESTING";
+            updateTimerDisplay(customSeconds, 0); 
+            
+            timerInterval = setInterval(checkTimerTick, 100);
+        }
+
+        function checkTimerTick() {
+            if(!timerEndTime) { finishTimer(); return; }
+            
+            const remainingMs = timerEndTime - Date.now();
+            if (remainingMs <= 0) {
+                finishTimer();
+            } else {
+                updateTimerDisplay(Math.ceil(remainingMs / 1000), remainingMs);
+            }
+        }
+
+        function updateTimerDisplay(remainingSec, remainingMs) {
+            const m = Math.floor(remainingSec / 60);
+            const s = remainingSec % 60;
+            document.getElementById('overlayTimerDisplay').innerText = `${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+            
+            const totalMs = timerTotalDuration * 1000;
+            const progress = (totalMs - remainingMs) / totalMs; 
+            const offset = 879.6 * (1 - progress); 
+            document.getElementById('timerProgressRing').style.strokeDashoffset = 879.6 - offset;
+        }
+
+        function finishTimer() {
+            clearInterval(timerInterval); timerInterval = null; timerEndTime = null;
+            if (isCoreMode && timerTargetExercise) toggleExerciseComplete(timerTargetExercise);
+            timerTargetExercise = null; saveData();
+            
+            confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 }, zIndex: 9999, colors: ['#3b82f6', '#ffffff'] });
+            if(navigator.vibrate) navigator.vibrate([600, 300, 600]);
+            
+            resetTimer(); // Close modal
+        }
+
+        function resetTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = null; timerEndTime = null; saveData();
+            
+            // Unfreeze background
+            document.body.classList.remove('modal-open');
+            
+            const modal = document.getElementById('fullscreenTimer');
+            modal.classList.add('hidden'); modal.classList.remove('flex');
+        }
+
+        // === WORKOUT FUNCTIONS (Standard) ===
+        function openGymModal() {
+            isCoreMode = false; isLibraryMode = false; activeMuscleGroup = null;
+            document.getElementById('btnHistory').style.display = 'flex'; document.getElementById('modalDay').innerText = dayName;
+            document.getElementById('modalTabs').classList.remove('hidden'); document.getElementById('btnBackToMenu').classList.add('hidden');
+            const m = document.getElementById('workoutModal'); m.classList.remove('hidden'); m.classList.add('flex');
+            const w = workouts[dayName];
+            if(!w.tabs.length) {
+                document.getElementById('modalTabs').classList.add('hidden');
+                document.getElementById('modalExercises').innerHTML = '<div class="flex flex-col items-center justify-center h-[70vh] empty-state-icon"><div class="text-[8rem] mb-2">🛌</div><h3 class="text-xs font-black text-gray-600 uppercase tracking-[0.3em] border-t border-[#222] pt-6 mt-4">Rest Day</h3></div>';
+                return;
+            }
+            document.getElementById('modalTabs').innerHTML = w.tabs.map((t, i) => `<button onclick="switchTab(${i})" class="${i===0 ? 'modal-active-tab' : 'text-slate-500 hover:bg-white/5'} flex-1 py-3 rounded-lg text-sm font-black uppercase tracking-widest transition-all">${t}</button>`).join('');
+            switchTab(0);
+        }
+
+        function switchTab(i) {
+            currentTab = i;
+            const w = workouts[dayName], container = document.getElementById('modalExercises'); container.innerHTML = "";
+            renderExercises(w.ex[currentTab], container);
+            const btns = document.getElementById('modalTabs').children;
+            for(let b of btns) b.className = 'text-slate-500 hover:bg-white/5 flex-1 py-3 rounded-lg text-sm font-black uppercase tracking-widest transition-all';
+            btns[i].className = 'modal-active-tab flex-1 py-3 rounded-lg text-sm font-black uppercase tracking-widest transition-all';
+        }
+
+        function renderExercises(list, container = document.getElementById('modalExercises')) {
+            let source = isLibraryMode ? {} : (exerciseData[dateKey] || {});
+            list.forEach((exObj) => {
+                const name = typeof exObj === 'object' ? exObj.name : exObj;
+                const timeStr = typeof exObj === 'object' && exObj.time ? exObj.time : null;
+                const seconds = typeof exObj === 'object' && exObj.seconds ? exObj.seconds : 0;
+                let ex = source[name];
+                if (!ex) ex = { sets: [{w:'',r:''}], completed: false };
+                if (!ex.sets || ex.sets.length === 0) ex.sets = [{w:'',r:''}];
+                
+                let videoBtn = `<a href="https://www.youtube.com/results?search_query=${encodeURIComponent(name + " exercise tutorial")}" target="_blank" class="action-pill pill-video">▶ VIDEO</a>`;
+                let timerBtn = timeStr ? `<div onclick="startTimerInterval(${seconds}, '${name}'); hideRestSelector(); document.getElementById('timerContainer').classList.remove('hidden'); event.stopPropagation();" class="action-pill pill-timer">⏱ ${timeStr}</div>` : '';
+                
+                let contentHTML = '';
+                if (!isCoreMode || !activeAbsLevel) {
+                    ex.sets.forEach((set, i) => { contentHTML += `<div class="flex items-center gap-3 mb-2"><span class="text-[10px] font-bold text-slate-500 w-6">S${i+1}</span><input type="number" placeholder="KG" value="${set.w}" oninput="logSet('${name}', ${i}, 'w', this.value)" class="glass-input-styled w-1/2 p-2 text-center text-sm font-bold rounded-lg"><input type="number" placeholder="REPS" value="${set.r}" oninput="logSet('${name}', ${i}, 'r', this.value)" class="glass-input-styled w-1/2 p-2 text-center text-sm font-bold rounded-lg"></div>`; });
+                }
+                
+                const isChecked = ex.completed, checkClass = isChecked ? "checked" : "", checkIcon = isChecked ? '<svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>' : '';
+                const card = document.createElement('div'); card.className = "modal-exercise-card p-5 rounded-2xl relative overflow-hidden transition-all duration-300 layer-boost mb-4";
+                card.innerHTML = `<div class="flex justify-between items-start mb-4"><div class="flex flex-col gap-2"><h4 class="font-black text-white text-lg uppercase tracking-tight leading-none">${name}</h4><div class="flex flex-wrap gap-2">${videoBtn} ${timerBtn}</div></div><div onclick="toggleExerciseComplete('${name}')"><div class="neon-checkbox ${checkClass}">${checkIcon}</div></div></div>${contentHTML}`;
+                container.appendChild(card);
+            });
+        }
+
+        function logSet(exName, setIdx, field, val) {
+            let source = isLibraryMode ? {} : exerciseData[dateKey];
+            if (!source) { source = {}; exerciseData[dateKey] = source; }
+            if(!source[exName]) source[exName] = { sets: [{w:'',r:''}], completed: false };
+            while(source[exName].sets.length <= setIdx) source[exName].sets.push({w:'', r:''});
+            source[exName].sets[setIdx][field] = val;
+            if(!isLibraryMode) saveData();
+        }
+
+        function toggleExerciseComplete(exName) {
+            let source = isLibraryMode ? {} : exerciseData[dateKey];
+            if (!source) { source = {}; exerciseData[dateKey] = source; }
+            if(!source[exName]) source[exName] = { sets: [{w:'',r:''}], completed: false };
+            source[exName].completed = !source[exName].completed;
+            if(source[exName].completed) {
+                if(navigator.vibrate) navigator.vibrate(50);
+                confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 }, colors: ['#22c55e', '#ffffff'] });
+            }
+            if(!isLibraryMode) saveData();
+            if(isCoreMode) { const container = document.getElementById('modalExercises'); container.innerHTML = ""; if(activeAbsLevel) { renderExercises(absLevels[activeAbsLevel]); updateCoreProgress(); } else if(activeCoreTab) { renderExercises(coreExercises[activeCoreTab]); updateCoreProgress(); } } else { const container = document.getElementById('modalExercises'); container.innerHTML = ""; renderExercises(workouts[dayName].ex[currentTab], container); calcTotalProgress(); }
+        }
+
+        function updateCoreProgress() {
+            const allCoreEx = [...coreExercises['Core'], ...coreExercises['Mobility'], ...coreExercises['Calisthenics']];
+            let coreTotal = allCoreEx.length, coreDone = 0;
+            allCoreEx.forEach(exObj => { const exName = exObj.name; if(exerciseData[dateKey] && exerciseData[dateKey][exName] && exerciseData[dateKey][exName].completed) coreDone++; });
+            document.getElementById('coreProgressBar').style.width = (coreTotal === 0 ? 0 : (coreDone / coreTotal * 100)) + '%';
+            if (activeAbsLevel) {
+               let absDone = 0;
+               absLevels[activeAbsLevel].forEach(ex => { if(exerciseData[dateKey] && exerciseData[dateKey][ex.name] && exerciseData[dateKey][ex.name].completed) absDone++; });
+               document.getElementById('absProgressBar').style.width = (absDone / absLevels[activeAbsLevel].length * 100) + '%';
+            }
+        }
+
+        function calcTotalProgress() {
+            if(!exerciseData[dateKey]) { updateCircle(0); return; }
+            let total = 0, done = 0;
+            const w = workouts[dayName];
+            if(!w.ex || w.ex.length === 0) return;
+            const allEx = [...w.ex[0], ...(w.ex[1] || [])];
+            allEx.forEach(ex => { total++; if(exerciseData[dateKey][ex] && exerciseData[dateKey][ex].completed) done++; });
+            const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+            updateCircle(pct);
+            if(total > 0 && done === total && !streakLocked) { streak++; streakLocked = true; saveData(); }
+            document.getElementById('streakCount').innerText = streak;
+        }
+
+        function updateCircle(pct) { document.getElementById('circleRing').style.strokeDashoffset = 175 - (175 * pct / 100); document.getElementById('gymPercent').innerText = pct + "%"; }
+
+        function openCoreModal(type) {
+            isCoreMode = true; isLibraryMode = false;
+            document.getElementById('btnBackToMenu').classList.add('hidden'); document.getElementById('modalExercises').innerHTML = "";
+            document.getElementById('btnHistory').style.display = 'none';
+            const m = document.getElementById('workoutModal'); m.classList.remove('hidden'); m.classList.add('flex');
+            if (type === 'abs') {
+                m.className = "fixed inset-0 z-50 flex flex-col modal-bg"; document.getElementById('modalDay').innerText = "ABS LEVEL"; document.getElementById('modalTabs').classList.add('hidden');
+                if(!exerciseData[dateKey]) exerciseData[dateKey] = {};
+                if (exerciseData[dateKey].absChoice) { selectAbsLevel(exerciseData[dateKey].absChoice); } else {
+                    const container = document.getElementById('modalExercises');
+                    container.innerHTML = `
+                        <div onclick="selectAbsLevel('beginner')" class="glass-card card-green p-6 rounded-3xl mb-4 cursor-pointer active:scale-95 transition-transform relative overflow-hidden"><div class="emoji-watermark">❤️‍🔥</div><div class="relative z-10 flex justify-between items-center"><div><h3 class="text-2xl font-black text-white italic tracking-tighter drop-shadow-md display-font">BEGINNER</h3><p class="text-[10px] font-bold text-emerald-200 tracking-[0.2em] uppercase mt-1">LOSE BELLY FAT</p></div><div class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center border border-white/10"><span class="text-xl text-white">➔</span></div></div></div>
+                        <div onclick="selectAbsLevel('intermediate')" class="glass-card card-ocean p-6 rounded-3xl mb-4 cursor-pointer active:scale-95 transition-transform relative overflow-hidden"><div class="emoji-watermark">⚔️</div><div class="relative z-10 flex justify-between items-center"><div><h3 class="text-2xl font-black text-white italic tracking-tighter drop-shadow-md display-font">INTERMEDIATE</h3><p class="text-[10px] font-bold text-blue-200 tracking-[0.2em] uppercase mt-1">ROCK HARD ABS</p></div><div class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center border border-white/10"><span class="text-xl text-white">➔</span></div></div></div>
+                        <div onclick="selectAbsLevel('advanced')" class="glass-card card-fire p-6 rounded-3xl mb-4 cursor-pointer active:scale-95 transition-transform relative overflow-hidden"><div class="emoji-watermark">☢️</div><div class="relative z-10 flex justify-between items-center"><div><h3 class="text-2xl font-black text-white italic tracking-tighter drop-shadow-md display-font">ADVANCED</h3><p class="text-[10px] font-bold text-red-200 tracking-[0.2em] uppercase mt-1">SIX PACK ABS</p></div><div class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center border border-white/10"><span class="text-xl text-white">➔</span></div></div></div>`;
+                }
+            } else {
+                activeAbsLevel = null; document.getElementById('modalDay').innerText = "DAILY CORE"; document.getElementById('modalTabs').classList.remove('hidden');
+                const tabs = Object.keys(coreExercises);
+                document.getElementById('modalTabs').innerHTML = tabs.map((t, i) => `<button onclick="switchCoreTab('${t}')" id="coreTab-${t}" class="${i === 0 ? 'modal-active-tab' : 'text-slate-500 hover:bg-white/5'} flex-1 py-3 rounded-lg text-sm font-black uppercase tracking-widest transition-all">${t}</button>`).join('');
+                switchCoreTab('Core');
+            }
+        }
+
+        function switchCoreTab(tabName) {
+            document.getElementById('modalExercises').innerHTML = ""; activeCoreTab = tabName;
+            const tabs = Object.keys(coreExercises);
+            tabs.forEach(t => { document.getElementById(`coreTab-${t}`).className = (t === tabName) ? 'modal-active-tab flex-1 py-3 rounded-lg text-sm font-black uppercase tracking-widest transition-all' : 'text-slate-500 hover:bg-white/5 flex-1 py-3 rounded-lg text-sm font-black uppercase tracking-widest transition-all'; });
+            renderExercises(coreExercises[tabName]);
+        }
+
+        function selectAbsLevel(level) {
+            document.getElementById('modalExercises').innerHTML = "";
+            if(!exerciseData[dateKey]) exerciseData[dateKey] = {}; if(!exerciseData[dateKey].absChoice) { exerciseData[dateKey].absChoice = level; saveData(); }
+            activeAbsLevel = level; document.getElementById('modalDay').innerText = level.toUpperCase(); renderExercises(absLevels[level]);
+        }
+
+        function openLibraryModal() {
+            isCoreMode = false; isLibraryMode = true; activeMuscleGroup = null;
+            document.getElementById('btnHistory').style.display = 'none'; document.getElementById('btnBackToMenu').classList.add('hidden');
+            document.getElementById('modalTabs').classList.add('hidden');
+            const m = document.getElementById('workoutModal'); m.classList.remove('hidden'); m.classList.add('flex');
+            document.getElementById('modalDay').innerText = "LIBRARY";
+            document.getElementById('modalExercises').innerHTML = `
+                <div class="grid grid-cols-1 gap-4 mt-2">
+                    <div onclick="selectMuscle('CHEST')" class="glass-card card-fire p-6 rounded-3xl cursor-pointer active:scale-95 transition-transform relative overflow-hidden"><div class="emoji-watermark">🦍</div><div class="z-10 relative"><h3 class="text-3xl font-black text-white italic tracking-tighter display-font">CHEST</h3><p class="text-[10px] font-bold text-red-200 tracking-[0.2em] uppercase mt-1">PUSH</p></div></div>
+                    <div onclick="selectMuscle('BACK')" class="glass-card card-ocean p-6 rounded-3xl cursor-pointer active:scale-95 transition-transform relative overflow-hidden"><div class="emoji-watermark">🛡️</div><div class="z-10 relative"><h3 class="text-3xl font-black text-white italic tracking-tighter display-font">BACK</h3><p class="text-[10px] font-bold text-blue-200 tracking-[0.2em] uppercase mt-1">PULL</p></div></div>
+                    <div onclick="selectMuscle('LEGS')" class="glass-card card-green p-6 rounded-3xl cursor-pointer active:scale-95 transition-transform relative overflow-hidden"><div class="emoji-watermark">🦖</div><div class="z-10 relative"><h3 class="text-3xl font-black text-white italic tracking-tighter display-font">LEGS</h3><p class="text-[10px] font-bold text-emerald-200 tracking-[0.2em] uppercase mt-1">WHEELS</p></div></div>
+                    <div onclick="selectMuscle('SHOULDERS')" class="glass-card card-gold p-6 rounded-3xl cursor-pointer active:scale-95 transition-transform relative overflow-hidden"><div class="emoji-watermark">🏹</div><div class="z-10 relative"><h3 class="text-3xl font-black text-white italic tracking-tighter display-font">SHOULDERS</h3><p class="text-[10px] font-bold text-yellow-200 tracking-[0.2em] uppercase mt-1">DELTS</p></div></div>
+                    <div onclick="selectMuscle('ARMS')" class="glass-card card-purple p-6 rounded-3xl cursor-pointer active:scale-95 transition-transform relative overflow-hidden"><div class="emoji-watermark">💪</div><div class="z-10 relative"><h3 class="text-3xl font-black text-white italic tracking-tighter display-font">ARMS</h3><p class="text-[10px] font-bold text-purple-200 tracking-[0.2em] uppercase mt-1">PEAKS</p></div></div>
+                    <div onclick="selectMuscle('CARDIO')" class="glass-card card-pink p-6 rounded-3xl cursor-pointer active:scale-95 transition-transform relative overflow-hidden"><div class="emoji-watermark">⚔️</div><div class="z-10 relative"><h3 class="text-3xl font-black text-white italic tracking-tighter display-font">CARDIO</h3><p class="text-[10px] font-bold text-pink-200 tracking-[0.2em] uppercase mt-1">ENDURANCE</p></div></div>
+                </div>
+            `;
+        }
+
+        function selectMuscle(muscleName) {
+            activeMuscleGroup = muscleName; document.getElementById('modalDay').innerText = muscleName;
+            document.getElementById('btnBackToMenu').classList.remove('hidden'); document.getElementById('btnBackToMenu').onclick = openLibraryModal;
+            const container = document.getElementById('modalExercises'); container.innerHTML = ""; renderExercises(muscleWorkouts[muscleName], container);
+        }
+
+        function closeModal() { document.getElementById('workoutModal').classList.add('hidden'); if (isCoreMode && activeAbsLevel) activeAbsLevel = null; isLibraryMode = false; activeMuscleGroup = null; }
+
+        function openHistoryModal() {
+            const container = document.getElementById('historyLogContainer'); container.innerHTML = "";
+            const dates = Object.keys(exerciseData).filter(k => k.match(/^\d{4}-\d{2}-\d{2}$/)).sort((a,b) => new Date(b) - new Date(a));
+            if (dates.length === 0) { container.innerHTML = "<div class='text-center text-slate-500 font-bold mt-10'>NO WORKOUTS LOGGED</div>"; } else {
+                dates.forEach(d => {
+                    const dateObj = new Date(d), prettyDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), dayData = exerciseData[d];
+                    let dayExercisesHTML = "";
+                    for (const [name, data] of Object.entries(dayData)) {
+                        if (name === 'absChoice') continue;
+                        const validSets = data.sets ? data.sets.filter(s => s.w && s.r) : [];
+                        if (validSets.length === 0 && !data.completed) continue;
+                        let setsHTML = validSets.length > 0 ? validSets.map(s => `<span class="block text-slate-400 text-xs font-mono ml-2 border-l border-slate-700 pl-2 mt-1">${s.w}kg × ${s.r}</span>`).join('') : `<span class="block text-green-400 text-xs font-mono ml-2 border-l border-slate-700 pl-2 mt-1">COMPLETED</span>`;
+                        dayExercisesHTML += `<div class="mb-4"><div class="text-sm font-bold text-white mb-1">${name}</div><div class="flex flex-col">${setsHTML}</div></div>`;
+                    }
+                    if (dayExercisesHTML) container.innerHTML += `<div class="glass-card p-5 rounded-2xl border border-white/5 mb-4"><div class="flex justify-between items-center mb-4 pb-3 border-b border-white/10"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs border border-blue-500/30 display-font">${prettyDate.split(' ')[1]}</div><div class="flex flex-col"><span class="text-xs font-bold text-slate-500 uppercase tracking-widest">${prettyDate.split(' ')[0]}</span></div></div></div>${dayExercisesHTML}</div>`;
+                });
+            }
+            document.getElementById('historyModal').classList.remove('hidden'); document.getElementById('historyModal').classList.add('flex');
+        }
+
+        function openWeightModal() {
+            document.getElementById('weightModal').classList.remove('hidden'); document.getElementById('weightModal').classList.add('flex'); 
+            setTimeout(() => refreshWeightUI(), 50);
+        }
+
+        function logNewWeight() {
+            const wInput = document.getElementById('newWeightInput'), dInput = document.getElementById('weightDateInput');
+            const val = parseFloat(wInput.value); if(!val || val <= 0) { alert("Please enter a valid weight"); return; }
+            let dateTs = Date.now(); if(dInput.value) { const d = new Date(dInput.value); d.setHours(12,0,0,0); dateTs = d.getTime(); }
+            weightHistory.push({date: dateTs, weight: val}); saveData(); refreshWeightUI(); wInput.value = ""; document.getElementById('addWeightSection').classList.add('hidden');
+        }
+
+        function refreshWeightUI() {
+            if(!weightHistory || weightHistory.length === 0) {
+                document.getElementById('historyList').innerHTML = "<div class='text-center text-gray-600 mt-10 text-xs font-bold tracking-widest'>NO HISTORY YET</div>";
+                document.getElementById('statCurrent').innerText = "--"; document.getElementById('statStart').innerText = "--"; document.getElementById('statChange').innerText = "--";
+                return;
+            }
+            const sorted = [...weightHistory].sort((a,b) => a.date - b.date);
+            const latest = sorted[sorted.length-1].weight, start = sorted[0].weight, change = latest - start;
+            document.getElementById('displayWeight').innerText = latest; document.getElementById('modalCurrentWeight').innerText = latest + " KG";
+            document.getElementById('statCurrent').innerText = latest; document.getElementById('statStart').innerText = start;
+            const changeEl = document.getElementById('statChange'); changeEl.innerText = (change > 0 ? "+" : "") + change.toFixed(1); changeEl.className = "text-lg font-black mt-1 display-font " + (change <= 0 ? "text-green-500" : "text-red-500");
+            const list = document.getElementById('historyList'); list.innerHTML = "";
+            const sortedDesc = [...weightHistory].sort((a,b) => b.date - a.date);
+            sortedDesc.forEach((item, idx) => {
+                const d = new Date(item.date).toLocaleDateString('en-US', {month:'short', day:'numeric'});
+                list.innerHTML += `<div class="glass-card p-3 rounded-2xl flex justify-between items-center transition-colors hover:bg-white/10 mb-2"><span class="text-xs font-bold text-slate-500 tracking-wide">${d}</span><div class="flex items-center gap-3"><span class="text-lg font-black text-white display-font">${item.weight} <span class="text-xs text-slate-500">KG</span></span><button onclick="requestDelete(${weightHistory.indexOf(item)})" class="w-8 h-8 flex items-center justify-center text-red-400 bg-red-500/10 rounded-full hover:bg-red-500 hover:text-white transition-all active:scale-90">✕</button></div></div>`;
+            });
+        }
+
+        function requestDelete(idx) { deleteIndex = idx; document.getElementById('deleteModal').classList.remove('hidden'); document.getElementById('deleteModal').classList.add('flex'); }
+        function confirmDelete() { if(deleteIndex > -1) { weightHistory.splice(deleteIndex, 1); saveData(); refreshWeightUI(); } document.getElementById('deleteModal').classList.add('hidden'); }
+
+        // === DATA FUNCTIONS ===
+        function saveData() {
+            const data = { date: dateKey, user: document.getElementById('userNameInput').value, exerciseData: exerciseData, weightHistory: weightHistory, streak: streak, streakLocked: streakLocked, timerEndTime: timerEndTime, timerTargetExercise: timerTargetExercise };
+            try { localStorage.setItem('fitnessProAI', JSON.stringify(data)); } catch(e) { console.error('Save error:', e); }
+        }
+
+        function loadData() {
+            const raw = localStorage.getItem('fitnessProAI');
+            if(raw) {
+                try {
+                    const data = JSON.parse(raw);
+                    userName = data.user || "USER";
+                    exerciseData = data.exerciseData || {};
+                    weightHistory = data.weightHistory || [];
+                    streak = data.streak || 0;
+                    timerEndTime = data.timerEndTime || null;
+                    timerTargetExercise = data.timerTargetExercise || null;
+                    if(data.date === dateKey) { streakLocked = data.streakLocked || false; } else { streakLocked = false; saveData(); }
+                } catch(e) { console.error('Load error:', e); }
+            }
+        }
+
+        function backupData() {
+            const raw = localStorage.getItem('fitnessProAI');
+            if (!raw) { alert("No data to backup!"); return; }
+            try {
+                const blob = new Blob([JSON.stringify(JSON.parse(raw), null, 2)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob), a = document.createElement('a');
+                a.href = url; a.download = `fitness_backup_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            } catch(e) { alert("Error preparing backup."); }
+        }
+
+        function restoreData(input) {
+            const file = input.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result, parsed = JSON.parse(content);
+                    if (!parsed.exerciseData) throw new Error("Invalid file");
+                    localStorage.setItem('fitnessProAI', JSON.stringify(parsed));
+                    alert("Data restored! App will reload."); location.reload();
+                } catch(err) { alert("Error: Invalid file format"); }
+            };
+            reader.readAsText(file);
+        }
+
+        function init() {
+            loadData();
+            const w = workouts[dayName];
+            document.getElementById('todayPreview').innerText = w.tabs.length ? `${w.tabs[0]} & ${w.tabs[1]}` : "REST DAY";
+            document.getElementById('userNameInput').value = userName;
+            document.getElementById('weightDateInput').valueAsDate = new Date();
+            if (!weightHistory || weightHistory.length === 0) { weightHistory = [{date: Date.now(), weight: 70}]; saveData(); }
+            calcTotalProgress(); updateCoreProgress(); refreshWeightUI();
+        }
+
+        init();
+    </script>
+</body>
+</html>
